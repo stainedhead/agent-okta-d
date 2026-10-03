@@ -1,0 +1,1 @@
+{"state":"degraded","providers":[{"provider":"aws","state":"valid","expires_at":"2026-10-03T13:00:00Z"},{"provider":"github","state":"reauth_required","last_error":"reauth_required"},{"provider":"snow","state":"degraded","last_error":"transient","retry_after_seconds":12}]}

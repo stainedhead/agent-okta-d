@@ -6,7 +6,7 @@ Rules for AI agents and human contributors working in this repository.
 
 `agent-okta-d` ("the daemon") is a credential daemon that runs beside each agent host (desktop or cloud). It authenticates to Okta with a private key the agent can never read, obtains short-lived OIDC tokens, and converts them into the credential forms that each downstream system's stock tooling already understands (AWS web-identity token file, git credential helper and `GH_TOKEN`, Bearer token for the `snow` CLI, a secret for the Atlassian MCP client, a delegated Graph token for the `outlook` and `teams` CLIs). The agent process never handles OIDC, never reads a long-lived secret and never sees a signing key.
 
-Status: Draft PRD (`agent-okta-d-PRD.md`), no implementation yet. The PRD is the source of truth; its evidence legend (confirmed vs. unconfirmed items) must be preserved when summarising it.
+Status: implemented against fakes (see README); the PRD (`specs/archive/261003-agent-okta-d/agent-okta-d-PRD.md`) is the source of truth; its evidence legend (confirmed vs. unconfirmed items) must be preserved when summarising it.
 
 `pkg/client` is consumed by [`agent-cli-core`](https://github.com/stainedhead/agent-cli-core), the shared CLI core library (its own repo); the `snow`, `outlook` and `teams` CLIs reach the daemon through the core.
 
@@ -16,7 +16,7 @@ Status: Draft PRD (`agent-okta-d-PRD.md`), no implementation yet. The PRD is the
 - Requirements: `agent-okta-d-PRD.md` (source of truth).
 - Design decisions: `docs/architectural-decision-record.md`.
 
-## Go layout (planned, per PRD section 9)
+## Go layout
 
 ```
 INTENT.md           why this exists and what it is for

@@ -1,0 +1,78 @@
+client: const DefaultTimeout = 5 * time.Second
+client: const EnvSocket = "AGENT_OKTA_D_SOCKET"
+client: const Redacted = "[redacted]"
+client: const StateDegraded State = "degraded"
+client: const StateEmpty State = "empty"
+client: const StateMinting State = "minting"
+client: const StateReauthRequired State = "reauth_required"
+client: const StateRefreshing State = "refreshing"
+client: const StateRevoked State = "revoked"
+client: const StateValid State = "valid"
+client: func (c *Client) Close()
+client: func (c *Client) Credential(ctx context.Context, provider string) (Credential, error)
+client: func (c *Client) Identity(ctx context.Context) (Identity, error)
+client: func (c *Client) Refresh(ctx context.Context, provider string) (Credential, error)
+client: func (c *Client) SocketPath() string
+client: func (c *Client) Status(ctx context.Context) (Status, error)
+client: func (c Credential) ExpiredAt(t time.Time) bool
+client: func (c Credential) String() string
+client: func (e *APIError) Error() string
+client: func (e *APIError) Is(target error) bool
+client: func (s *Secret) UnmarshalJSON(b []byte) error
+client: func (s Secret) Format(f fmt.State, _ rune)
+client: func (s Secret) GoString() string
+client: func (s Secret) IsZero() bool
+client: func (s Secret) LogValue() slog.Value
+client: func (s Secret) MarshalJSON() ([]byte, error)
+client: func (s Secret) MarshalText() ([]byte, error)
+client: func (s Secret) Reveal() string
+client: func (s Secret) String() string
+client: func DefaultSocketPath() string
+client: func New(opts ...Option) *Client
+client: func NewSecret(v string) Secret
+client: func RetryAfter(err error) (time.Duration, bool)
+client: func WithSocketPath(path string) Option
+client: func WithTimeout(d time.Duration) Option
+client: type APIError struct { Status int Code string State State RetryAfter time.Duration }
+client: type Client struct { }
+client: type Credential struct { TokenType string `json:"token_type"` AccessToken Secret `json:"access_token"` IssuedAt time.Time `json:"issued_at"` ExpiresAt time.Time `json:"expires_at"` Audience string `json:"audience"` }
+client: type Identity struct { AgentID string `json:"agent_id"` OktaClientID string `json:"okta_client_id"` KID string `json:"kid"` DaemonVersion string `json:"daemon_version"` APIVersion string `json:"api_version"` }
+client: type Option func(*Client)
+client: type ProviderStatus struct { Provider string `json:"provider"` State State `json:"state"` ExpiresAt *time.Time `json:"expires_at,omitempty"` LastError string `json:"last_error,omitempty"` RetryAfterSeconds int `json:"retry_after_seconds,omitempty"` }
+client: type Secret struct{}
+client: type State string
+client: type Status struct { State State `json:"state"` Providers []ProviderStatus `json:"providers"` }
+client: var ErrDaemonUnavailable = errors.New("agent-okta-d: daemon unavailable")
+client: var ErrDegraded = errors.New("agent-okta-d: degraded")
+client: var ErrInvalidResponse = errors.New("agent-okta-d: invalid response")
+client: var ErrNotConfigured = errors.New("agent-okta-d: provider not configured")
+client: var ErrReauthRequired = errors.New("agent-okta-d: reauthentication required")
+client: var ErrRevoked = errors.New("agent-okta-d: revoked")
+client: var ErrUnauthorized = errors.New("agent-okta-d: caller not authorized")
+clienttest: const CodeDegraded = "degraded"
+clienttest: const CodeInternal = "internal"
+clienttest: const CodeNotConfigured = "not_configured"
+clienttest: const CodeReauthRequired = "reauth_required"
+clienttest: const CodeRevoked = "revoked"
+clienttest: const CodeUnauthorized = "unauthorized"
+clienttest: func (s *Server) Close()
+clienttest: func (s *Server) Requests() []Request
+clienttest: func (s *Server) SetCredential(provider string, c Credential)
+clienttest: func (s *Server) SetDelay(d time.Duration)
+clienttest: func (s *Server) SetGlobalError(e Error)
+clienttest: func (s *Server) SetIdentity(id Identity)
+clienttest: func (s *Server) SetProviderError(provider string, e Error)
+clienttest: func (s *Server) SetRaw(status int, body string)
+clienttest: func (s *Server) SetRefreshed(provider string, c Credential)
+clienttest: func (s *Server) SetStatus(st Status)
+clienttest: func (s *Server) SocketPath() string
+clienttest: func DeadSocketPath(t TB) string
+clienttest: func New(t TB) *Server
+clienttest: type Credential struct { TokenType string `json:"token_type"` AccessToken string `json:"access_token"` IssuedAt time.Time `json:"issued_at"` ExpiresAt time.Time `json:"expires_at"` Audience string `json:"audience"` }
+clienttest: type Error struct { Code string State string RetryAfter time.Duration HTTPStatus int }
+clienttest: type Identity struct { AgentID string `json:"agent_id"` OktaClientID string `json:"okta_client_id"` KID string `json:"kid"` DaemonVersion string `json:"daemon_version"` APIVersion string `json:"api_version"` }
+clienttest: type ProviderStatus struct { Provider string `json:"provider"` State string `json:"state"` ExpiresAt *time.Time `json:"expires_at,omitempty"` LastError string `json:"last_error,omitempty"` RetryAfterSeconds int `json:"retry_after_seconds,omitempty"` }
+clienttest: type Request struct { Method string Path string }
+clienttest: type Server struct { }
+clienttest: type Status struct { State string `json:"state"` Providers []ProviderStatus `json:"providers"` }
+clienttest: type TB interface { Helper() Fatalf(format string, args ...any) Cleanup(func()) }
