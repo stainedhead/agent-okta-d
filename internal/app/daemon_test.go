@@ -163,10 +163,14 @@ func TestStartupWipesStaleSinks(t *testing.T) {
 		}
 	}
 	f.start(t)
-	for _, p := range []string{tf, stale} {
-		if _, err := os.Stat(p); !os.IsNotExist(err) {
-			t.Fatalf("%s survives start: %v", p, err)
-		}
+	// The daemon may already have minted and written a fresh token file by the
+	// time start returns, so a file at tf is fine as long as the stale content
+	// is gone. The stale temp file is never rewritten and must not exist.
+	if _, err := os.Stat(stale); !os.IsNotExist(err) {
+		t.Fatalf("%s survives start: %v", stale, err)
+	}
+	if b, err := os.ReadFile(tf); err == nil && string(b) == "old" {
+		t.Fatalf("%s still holds the stale content", tf)
 	}
 }
 
