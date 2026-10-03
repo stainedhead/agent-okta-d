@@ -584,6 +584,79 @@ Disabling the Okta app stops **new** tokens. Credentials already issued live unt
 10. Is Agent 365 / Entra Agent ID licensed in your tenant, and is the preview dependency acceptable for the P2 spike?
 11. Entra: is it federated to Okta or password-synced from AD? Who can sign in as the agent user to complete the one-time device-code enrollment (MFA factors, break-glass), and what Conditional Access policy will apply to the agent group?
 
+## 17. CI/CD and release requirements
+
+Applies to this repository only; the four Go repositories in the set (`agent-okta-d`, `snow-cli`, `outlook-cli`, `teams-cli`) use the same pipeline shape so a pipeline change is made once and copied. Pipelines are GitHub Actions workflows under `.github/workflows/`. The scaffolded `ci.yml` is a starting point and must be brought in line with this section. Items marked ⚠️ are not confirmed against vendor documentation and need a spike before the pipeline depends on them.
+
+**Terminology.** *CI* verifies a change. *CD* produces and publishes a **release**: a semver-versioned set of signed artifacts. **Publishing a release is the whole of "deploy" in this section.** Rolling a release out to agent hosts, harness images or AWS accounts is the swarm owner's job (see REL-12).
+
+### 17.1 Continuous integration
+
+| ID | Requirement |
+|---|---|
+| BLD-1 | CI runs on **every pull request targeting `main`** and **on demand** (`workflow_dispatch`, optionally against a chosen ref). CI also runs as the first stage of every release (REL-9), so nothing is released untested. |
+| BLD-2 | Checks: `gofmt -l .` is empty; `go mod tidy` leaves no diff; `go vet ./...`; `golangci-lint` at a pinned version; `go test -race ./...`; `govulncheck ./...`. |
+| BLD-3 | Every release target (REL-1) is **cross-compiled on each PR**, so a portability break is found before merge, not at release time. |
+| BLD-4 | PR CI needs **no credentials and no network access to real systems**: tests use fakes, mock endpoints and fake clocks. Integration tests against an Okta sandbox, AWS test account or KMS key run **only on demand** in a separate workflow, using environment-scoped, short-lived credentials obtained by GitHub OIDC, never repository secrets holding long-lived keys. |
+| BLD-5 | The CI workflow is a **required status check** on `main` once branch protection is enabled. Branch protection is not configured yet; enabling it is a separate step. |
+| BLD-6 | Workflows use least privilege (`permissions: contents: read` for CI), pin the Go version from `go.mod`, and pin third-party actions to a version or commit SHA. |
+
+### 17.2 Release targets and artifacts
+
+| ID | Target | Build | Artifact |
+|---|---|---|---|
+| REL-1a | **macOS, Apple silicon** | `darwin/arm64` | `.tar.gz` containing the `agent-okta-d` binary, signed and notarized with an Apple Developer ID (§12 already requires Apple notarization and `cosign`). The macOS Keychain and Secure Enclave signers (§4, topology B) may need cgo, which means the darwin build runs on a macOS runner, not a cross-compile ⚠️. |
+| REL-1b | **Windows via WSL** | `linux/amd64` (and `linux/arm64` for WSL on Arm, see 17.7) | `.tar.gz`; WSL runs Linux binaries, so **this is the Linux build** and no native Windows `.exe` is produced. Native Windows is not a target. |
+| REL-1c | **Linux, AWS-hosted container** | `linux/amd64` and `linux/arm64` (Graviton) | Multi-arch **OCI image** `ghcr.io/stainedhead/agent-okta-d:vX.Y.Z`, non-root, minimal base, plus the same Linux binaries as `.tar.gz` |
+
+Common to all targets:
+
+- REL-2. Each release also publishes `SHA256SUMS`, an SBOM (SPDX or CycloneDX), a build-provenance attestation, and a signature for every artifact. Linux and container artifacts are signed with `cosign` keyless signing from the workflow's GitHub OIDC identity ⚠️. The install documentation in `user-docs/` states how to verify them.
+- REL-3. Builds are reproducible as far as Go allows: pinned toolchain, `-trimpath`, `CGO_ENABLED=0` where possible, and a build timestamp taken from the commit.
+- REL-4. The binary reports its version (`agent-okta-d version`: semver, commit, build date), stamped with `-ldflags`. `agent-okta-d doctor` also reports the version, and the audit log records it at start-up.
+- REL-4a. For the daemon the image is the **sidecar** deployment (topology A) and the tarballs are the desktop and VM installs (topologies B and C). Each tarball includes the service definition for its platform (macOS LaunchDaemon plist, systemd unit); the daemon and the agent must run as different OS users, so the install steps must refuse to run the daemon as the agent's user (§4, §15).
+
+### 17.3 Versioning
+
+| ID | Requirement |
+|---|---|
+| REL-5 | Releases follow **semantic versioning** (`MAJOR.MINOR.PATCH`). The git tag `vX.Y.Z` on `main` is the release identity. Tags are immutable: a version is never re-tagged or re-published. |
+| REL-6 | Releases start at `0.1.0` and stay `0.y.z` while this PRD is a draft. `1.0.0` is cut by an explicit decision, never automatically. |
+| REL-7 | The bump is taken from a **PR label** (`release:major`, `release:minor`, `release:patch`). An unlabeled PR that changes shipped code defaults to `patch`. A PR that touches only `docs/`, `user-docs/`, `specs/`, `*.md` or `INTENT.md` does **not** cause a release. `pkg/client` (§9) is part of the same Go module, so it takes the same version. A breaking change to `pkg/client` is a `major` bump, and from `v2` the module path needs the `/v2` suffix. The `snow`, `outlook` and `teams` CLIs pin a released `pkg/client` version. |
+
+### 17.4 Continuous delivery
+
+| ID | Requirement |
+|---|---|
+| REL-8 | CD runs **on merge of a pull request to `main`** and **on demand** (`workflow_dispatch` with a `bump` of `major`, `minor` or `patch`, an optional explicit `version`, and a `dry_run` option that builds and verifies but publishes nothing). |
+| REL-9 | Stages, in order: CI gate (all of 17.1), compute version, cross-build every target, package, checksum, SBOM, sign and attest, **smoke-verify**, publish. Publishing creates the tag, a GitHub Release with notes generated from merged PR titles, and pushes the container image tagged `vX.Y.Z` and `vX.Y`. No `latest` tag is relied on; consumers pin a version. |
+| REL-10 | Smoke-verify runs the built artifact before anything is published: the `linux/amd64` binary and the container image on a Linux runner, the `darwin/arm64` binary on an Apple-silicon runner. Each must run `agent-okta-d version` and report the expected version. |
+| REL-11 | **All-or-nothing:** if any target fails to build, sign or verify, nothing is published. A failed run is safe to re-run, and a version is never published twice. |
+| REL-12 | CD **does not roll out** a release. It does not deploy to AWS accounts, restart daemons, or rebuild harness images. The harness images in `agentic-team-w-paperclip` are intended to consume a released artifact by pinned version ⚠️ (to be agreed with that repository), rather than build this tool from source. |
+| REL-13 | The release job gets only what it needs (`contents: write`, `packages: write`, `id-token: write`, attestations) from a protected `release` environment. Apple signing material lives only in that environment's secrets. On-demand runs require write access to the repository, and a `major` bump on demand should require a reviewer approval on the environment. No long-lived cloud credentials are stored in the repository. |
+| REL-14 | A bad release is not deleted. It is superseded by a newer patch release and marked as withdrawn in its release notes; its tags and images stay in place. |
+
+### 17.5 Repository-specific requirements
+
+- **Release contents:** the `agent-okta-d` binary, the service definitions above, a sample configuration with placeholder values only (never real tenant identifiers or keys), and the `pkg/client` module tag.
+- **Key custody in CI:** no signing key for Okta, AWS KMS, Keychain or TPM ever exists in the pipeline. Signer back ends are tested with fakes in PR CI.
+- **Exposure drill:** the kill-switch drill (§13, M5) is a manual, on-demand activity and is not part of release CD.
+- **Harness integration:** whether Hermes can consume the daemon's outputs as §16 question 2 asks is confirmed in M0, not by the pipeline.
+
+### 17.6 Milestone placement
+
+BLD-1 to BLD-6 are in place before the first milestone that merges Go code. The release pipeline (REL-1 to REL-14) is in place before the first tagged build, and no later than the first milestone that produces a runnable binary. Release signing and notarization may land later, in the hardening milestone, but unsigned builds are labelled pre-release until then.
+
+### 17.7 Open items (CI/CD)
+
+1. **Apple signing.** Is an Apple Developer ID and notarization account available for CD? Until it is, darwin artifacts carry only the `cosign` signature and users must clear the quarantine attribute themselves ⚠️.
+2. **Registry.** `ghcr.io` is assumed, matching `agentic-team-w-paperclip`. Should images also be pushed to Amazon ECR for the AWS-hosted container case?
+3. **What "deploy" means.** This section treats it as publishing a release (REL-12). Confirm that no automatic rollout into an AWS environment is wanted.
+4. **Version bump rule.** PR labels are assumed (REL-7). Conventional commits are the alternative.
+5. **WSL on Arm.** Is `linux/arm64` for WSL wanted, or `linux/amd64` only?
+6. **Shared pipeline.** Should the common workflow steps live in one reusable workflow? Where it lives is tied to the open question of where `agent-cli-core` lives; it is not decided here.
+7. **WSL service support.** Running the daemon's service definition under WSL needs systemd in the WSL distribution ⚠️; confirm before documenting it as supported. Applies only where this tool installs a service.
+
 ## Appendix A — Sources consulted
 
 - Okta: [Implement OAuth for Okta with a service app](https://developer.okta.com/docs/guides/implement-oauth-for-okta-serviceapp/main/) · [Set up OAuth for API access](https://developer.okta.com/docs/guides/set-up-oauth-api/main/) · [Authorization servers](https://developer.okta.com/docs/concepts/auth-servers/) · [Authorization Servers API](https://developer.okta.com/docs/reference/api/authorization-servers/) · [Org AS requires private_key_jwt (dev forum)](https://devforum.okta.com/t/clientid-and-client-secret-rejected-with-error/32886) · [2026 release notes](https://developer.okta.com/docs/release-notes/2026-okta-identity-engine/) · [AI agent token exchange](https://developer.okta.com/docs/guides/ai-agent-token-exchange/secret/main/) · [Agent SSO announcement](https://www.okta.com/newsroom/press-releases/okta-brings-first-class-identity-to-ai-agents-with-agent-sso/) · [okta-aws-cli](https://github.com/okta/okta-aws-cli)
