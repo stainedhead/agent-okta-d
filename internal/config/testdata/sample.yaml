@@ -1,0 +1,64 @@
+# Sample agent-okta-d configuration. Placeholder values only: never commit real
+# tenant identifiers, ARNs, account ids or keys. Paths shown are for Linux;
+# macOS uses /var/run/agentd/.
+agent:
+  id: sdlc-reviewer-01
+  environment: prod
+
+okta:
+  org_url: https://EXAMPLE.okta.com
+  client_id: 0oaEXAMPLEEXAMPLE01
+  signer:
+    type: kms                  # kms | keychain | tpm | file (dev only)
+    key_id: arn:aws:kms:us-east-1:111111111111:key/00000000-0000-0000-0000-000000000000
+    alg: RS256                 # RS256 | ES256 (ES256 flagged, A-01)
+    kid: sdlc-reviewer-01-2026q4
+
+providers:
+  aws:
+    authorization_server: agents-aws
+    scope: aws.assume
+    token_file: /run/agentd/sdlc-reviewer-01/aws-web-identity.jwt
+    file_mode: "0440"
+    role_arn: arn:aws:iam::222222222222:role/agent-sdlc-reviewer-01
+    role_session_name: sdlc-reviewer-01
+    region: us-east-1
+
+  github:
+    api_base: https://api.github.com
+    mode: pat                  # pat | oauth_device
+    login: agent-sdlc-reviewer-01_example
+    oauth_client_id: ""
+    store:
+      type: aws-secretsmanager # aws-secretsmanager | keychain | file-encrypted
+      secret_id: arn:aws:secretsmanager:us-east-1:222222222222:secret:agents/sdlc-reviewer-01/github
+    expiry_warning_days: 30
+    git_identity:
+      name: sdlc-reviewer-01
+      email: "<id>+<login>@users.noreply.github.com"
+
+  servicenow:
+    instance_url: https://EXAMPLE.service-now.com
+    authorization_server: agents-snow
+    scope: snow.agent
+    min_ttl_seconds: 120
+
+  msgraph:
+    tenant_id: 00000000-0000-0000-0000-000000000000
+    app_client_id: 11111111-1111-1111-1111-111111111111
+    upn: sdlc-reviewer-01@example.com
+    scopes: [User.Read, offline_access, Mail.ReadWrite, Mail.Send, Chat.ReadWrite, ChannelMessage.Send]
+    store:
+      type: aws-secretsmanager
+      secret_id: arn:aws:secretsmanager:us-east-1:222222222222:secret:agents/sdlc-reviewer-01/msgraph
+    reauth_warning_days: 14
+
+  atlassian:
+    type: secret
+    source: aws-secretsmanager
+    secret_id: arn:aws:secretsmanager:us-east-1:222222222222:secret:agents/sdlc-reviewer-01/atlassian
+    sink: { file: /run/agentd/sdlc-reviewer-01/atlassian.key, mode: "0440" }
+
+refresh: { fraction: 0.5, jitter: 0.05, min_margin_seconds: 120 }
+ipc:     { socket: /run/agentd/sdlc-reviewer-01/agentd.sock, allow_gids: [agent] }
+log:     { level: info, format: json, destination: stderr }
