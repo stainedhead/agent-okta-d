@@ -24,9 +24,10 @@ fmt:
 	gofmt -w .
 
 # Coverage gate: >= 80 % for every internal/ package, >= 90 % for pkg/client
-# (packages without statements or without tests yet are skipped).
+# (packages without statements or without tests yet, and the storetest helper, are skipped).
 cover:
 	@go test -race -cover ./internal/... ./pkg/... | awk '\
+	  /storetest/ { next } \
 	  /coverage:/ { pct=$$0; sub(/.*coverage: /,"",pct); sub(/%.*/,"",pct); pkg=$$2; \
 	    min=(pkg ~ /pkg\/client/)?90:80; print; if (pct+0 < min) { bad=1; print "  below " min "%: " pkg } } \
 	  /FAIL/ { bad=1; print } \
