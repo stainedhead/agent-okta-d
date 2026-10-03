@@ -75,6 +75,7 @@ func Enroll(ctx context.Context, cfg Config) error {
 	if cfg.HTTP == nil {
 		cfg.HTTP = &http.Client{Timeout: 30 * time.Second}
 	}
+	cfg.HTTP = domain.NoRedirect(cfg.HTTP) // FR-R08
 	if cfg.Out == nil {
 		cfg.Out = io.Discard
 	}

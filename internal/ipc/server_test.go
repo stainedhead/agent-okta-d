@@ -446,3 +446,59 @@ type failListener struct{}
 func (*failListener) Accept() (net.Conn, error) { return nil, errors.New("accept failed") }
 func (*failListener) Close() error              { return nil }
 func (*failListener) Addr() net.Addr            { return &net.UnixAddr{} }
+
+// FR-R07: idle connections are capped and reaped, so an allowed caller is
+// still served after the idle timeout.
+func TestIdleConnectionsAreCappedAndReaped(t *testing.T) {
+	cfg := baseCfg()
+	cfg.MaxConns, cfg.IdleTimeout = 2, 200*time.Millisecond
+	e := newEnv(t, cfg)
+	var idle []net.Conn
+	for range cfg.MaxConns {
+		c, err := net.Dial("unix", e.sock)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = c.Close() }()
+		if _, err := io.WriteString(c, "GET /healthz HTTP/1.1\r\nHost: x\r\n\r\n"); err != nil {
+			t.Fatal(err)
+		}
+		buf := make([]byte, 64)
+		if _, err := c.Read(buf); err != nil {
+			t.Fatal(err)
+		}
+		idle = append(idle, c) // keep-alive, now idle
+	}
+	// Both slots are held; a further caller queues and is served once the
+	// server closes the idle connections.
+	start := time.Now()
+	type res struct {
+		code int
+		err  error
+	}
+	ch := make(chan res, 1)
+	go func() {
+		c := &http.Client{Transport: &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+			return (&net.Dialer{}).DialContext(ctx, "unix", e.sock)
+		}, DisableKeepAlives: true}, Timeout: 5 * time.Second}
+		r, err := c.Get("http://x/healthz")
+		if err != nil {
+			ch <- res{err: err}
+			return
+		}
+		_ = r.Body.Close()
+		ch <- res{code: r.StatusCode}
+	}()
+	select {
+	case r := <-ch:
+		if r.err != nil || r.code != 200 {
+			t.Fatalf("queued caller: %+v", r)
+		}
+		if time.Since(start) < cfg.IdleTimeout/2 {
+			t.Errorf("served in %v: the cap did not hold the caller back", time.Since(start))
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("allowed caller starved after idle timeout")
+	}
+	_ = idle
+}

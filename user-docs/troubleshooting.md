@@ -13,6 +13,8 @@
 
 ## Common messages
 
+- `403 unauthorized` on Linux although the agent is in an allowed group: the daemon reads supplementary groups from `/proc/<pid>/status`; if `/proc` is mounted with `hidepid` only the primary gid is checked. Make the allowed group the agent's primary group or relax `hidepid` for the daemon.
+- `socket directory ... is accessible to other users` / `owned by uid`, exit 77: `chown` the socket directory to the daemon user and `chmod 0750` (or tighter).
 - `the agent-okta-d daemon is unreachable (is it running, and is this user in ipc.allow_gids?)`: wrong socket (set `AGENT_OKTA_D_SOCKET` or `--socket`; the client default differs from the daemon's per-agent default), daemon not running, or the socket directory is not traversable by your group.
 - `<provider> needs re-enrollment: run agent-okta-d enroll <provider>`: the stored user credential expired or was invalidated (state `reauth_required`).
 - `<provider> is degraded, retry in Ns`: upstream failing; the daemon retries with backoff. Check `status` for `last_error`.

@@ -7,6 +7,7 @@ import (
 
 	"github.com/stainedhead/agent-okta-d/internal/config"
 	"github.com/stainedhead/agent-okta-d/internal/domain"
+	"github.com/stainedhead/agent-okta-d/internal/obs"
 	"github.com/stainedhead/agent-okta-d/internal/store/awssm"
 	"github.com/stainedhead/agent-okta-d/internal/store/encfile"
 	"github.com/stainedhead/agent-okta-d/internal/store/keychain"
@@ -30,6 +31,7 @@ type storeSet struct {
 	cfg    *config.Config
 	env    Env
 	signer domain.Signer
+	scrub  *domain.Scrubber // optional; registers every value read or written
 
 	mu    sync.Mutex
 	built map[string]domain.SecretStore
@@ -49,6 +51,7 @@ func (s *storeSet) Store(name string) (domain.SecretStore, error) {
 	if err != nil {
 		return nil, err
 	}
+	st = obs.ScrubStore(st, s.scrub)
 	s.built[name] = st
 	return st, nil
 }

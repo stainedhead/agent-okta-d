@@ -11,7 +11,8 @@ import (
 
 // ListenUnix listens on a unix socket at path with the given file mode. A
 // stale socket file left by a crashed daemon is replaced; a live one, or any
-// other kind of file, is an error. The socket is chmod-ed to mode right after bind.
+// other kind of file, is an error. The socket is created under a umask that
+// makes it no wider than mode (FR-R04) and is chmod-ed to mode right after bind.
 func ListenUnix(path string, mode fs.FileMode) (net.Listener, error) {
 	if fi, err := os.Lstat(path); err == nil {
 		if fi.Mode().Type()&fs.ModeSocket == 0 {
@@ -27,7 +28,7 @@ func ListenUnix(path string, mode fs.FileMode) (net.Listener, error) {
 	} else if !errors.Is(err, fs.ErrNotExist) {
 		return nil, err
 	}
-	ln, err := net.Listen("unix", path)
+	ln, err := listenWithMode(path, mode)
 	if err != nil {
 		return nil, err
 	}

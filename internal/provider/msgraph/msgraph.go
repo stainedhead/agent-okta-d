@@ -83,6 +83,7 @@ func New(cfg Config) (*Provider, error) {
 	if cfg.HTTP == nil {
 		cfg.HTTP = &http.Client{Timeout: 30 * time.Second}
 	}
+	cfg.HTTP = domain.NoRedirect(cfg.HTTP) // FR-R08
 	cfg.LoginBase = strings.TrimRight(cfg.LoginBase, "/")
 	cfg.GraphBase = strings.TrimRight(cfg.GraphBase, "/")
 	return &Provider{cfg: cfg}, nil

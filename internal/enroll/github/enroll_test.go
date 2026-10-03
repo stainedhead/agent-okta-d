@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -438,5 +439,26 @@ func TestA06_ClientIDDefaultsToGitHubCLIApp(t *testing.T) {
 	}
 	if ds.codeForm["client_id"] != ghprov.DefaultOAuthClientID {
 		t.Fatalf("%v", ds.codeForm)
+	}
+}
+
+// FR-R08: the device-flow POSTs (device code, poll) must not follow a 307.
+func TestEnrollDeviceDoesNotFollowRedirect(t *testing.T) {
+	var hits atomic.Int32
+	second := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { hits.Add(1) }))
+	defer second.Close()
+	e := newEnv(t, ghprov.ModeOAuthDevice, func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, second.URL+r.URL.Path, http.StatusTemporaryRedirect)
+	})
+	p, err := ghprov.New(ghprov.Config{APIBase: e.srv.URL, Mode: ghprov.ModeOAuthDevice, Login: "agent-x_acme", StoreName: "aws", SecretID: key, OAuthClientID: "cid", HTTPClient: &http.Client{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.opt.Provider = p
+	if _, err := EnrollDevice(context.Background(), e.opt, DeviceOptions{}); err == nil {
+		t.Fatal("expected an error from the 307")
+	}
+	if hits.Load() != 0 {
+		t.Fatalf("redirect target received %d requests", hits.Load())
 	}
 }

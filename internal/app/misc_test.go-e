@@ -405,6 +405,7 @@ func TestDepsAndBackend(t *testing.T) {
 	}
 }
 
+<<<<<<< HEAD
 // FR-R03: the pidfile is private and a stale one is replaced at start.
 func TestPidFileModeAndStaleReplaced(t *testing.T) {
 	f := newFixture(t, fixOpt{})

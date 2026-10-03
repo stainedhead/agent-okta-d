@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -355,4 +356,23 @@ func (s *errStore) Get(context.Context, string) (domain.SecretValue, error) {
 
 func (s *errStore) Put(context.Context, string, domain.SecretString, string) (string, error) {
 	return "", domain.ErrVersionConflict
+}
+
+// FR-R08: a 307 on the device-code endpoint must not be followed.
+func TestEnrollDoesNotFollowRedirect(t *testing.T) {
+	var hits atomic.Int32
+	second := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { hits.Add(1) }))
+	defer second.Close()
+	first := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, second.URL+"/dc", http.StatusTemporaryRedirect)
+	}))
+	defer first.Close()
+	e := newEnv(t)
+	e.cfg.LoginBase, e.cfg.GraphBase, e.cfg.HTTP = first.URL, first.URL, &http.Client{}
+	if err := Enroll(context.Background(), e.cfg); err == nil {
+		t.Fatal("expected an error from the 307")
+	}
+	if hits.Load() != 0 {
+		t.Fatalf("redirect target received %d requests", hits.Load())
+	}
 }

@@ -52,10 +52,7 @@ func (a *API) get(ctx context.Context, token domain.SecretString, path string) (
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 	req.Header.Set("User-Agent", "agent-okta-d")
-	hc := a.HTTP
-	if hc == nil {
-		hc = http.DefaultClient
-	}
+	hc := domain.NoRedirect(a.HTTP) // FR-R08
 	resp, err := hc.Do(req)
 	if err != nil {
 		// url.Error text holds the URL only, never headers.

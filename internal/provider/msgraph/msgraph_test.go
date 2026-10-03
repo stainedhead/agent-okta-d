@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -380,5 +381,29 @@ func TestNoSecretsInErrorsOrLogs(t *testing.T) {
 	_, err := v.p.Mint(context.Background(), v.deps)
 	if err == nil || strings.Contains(err.Error(), "rt-old") {
 		t.Fatalf("refresh token leaked: %v", err)
+	}
+}
+
+// FR-R08: a 307 on the token endpoint must not re-send the refresh token.
+func TestMintDoesNotFollowRedirect(t *testing.T) {
+	var hits atomic.Int32
+	second := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { hits.Add(1) }))
+	defer second.Close()
+	first := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, second.URL+"/tok", http.StatusTemporaryRedirect)
+	}))
+	defer first.Close()
+	v := newEnv(t)
+	cfg := v.p.cfg
+	cfg.LoginBase, cfg.GraphBase, cfg.HTTP = first.URL, first.URL, &http.Client{}
+	p, err := New(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := p.Mint(context.Background(), v.deps); err == nil {
+		t.Fatal("expected an error from the 307")
+	}
+	if hits.Load() != 0 {
+		t.Fatalf("redirect target received %d requests", hits.Load())
 	}
 }

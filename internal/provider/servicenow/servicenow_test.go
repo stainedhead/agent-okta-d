@@ -303,3 +303,23 @@ func TestProbeDoesNotLeakTokenInTransportError(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 }
+
+// FR-R08: a 307 from the instance must not be followed (the bearer token
+// would be re-sent to the second host).
+func TestProbeDoesNotFollowRedirect(t *testing.T) {
+	var hits atomic.Int32
+	second := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { hits.Add(1) }))
+	defer second.Close()
+	first := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, second.URL+"/x", http.StatusTemporaryRedirect)
+	}))
+	defer first.Close()
+	p, err := servicenow.New(servicenow.Config{InstanceURL: first.URL, AuthServer: "a", Scope: "s", HTTPClient: &http.Client{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = p.Probe(context.Background(), cred("good"))
+	if hits.Load() != 0 {
+		t.Fatalf("redirect target received %d requests", hits.Load())
+	}
+}

@@ -75,6 +75,7 @@ func (c Config) Normalize() (Config, error) {
 	if c.HTTPClient == nil {
 		c.HTTPClient = &http.Client{Timeout: 15 * time.Second}
 	}
+	c.HTTPClient = domain.NoRedirect(c.HTTPClient) // FR-R08: tokens and device codes never follow a redirect
 	return c, nil
 }
 

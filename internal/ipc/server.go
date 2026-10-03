@@ -33,7 +33,21 @@ type Config struct {
 	// RetryAfter is the 503 hint when the backend gives none; zero means
 	// DefaultRetryAfter.
 	RetryAfter time.Duration
+	// IdleTimeout closes keep-alive connections that stay idle; zero means
+	// DefaultIdleTimeout.
+	IdleTimeout time.Duration
+	// MaxConns caps concurrent connections (FR-R07); zero means
+	// DefaultMaxConns. Further connections wait in the accept queue.
+	MaxConns int
 }
+
+// Connection limits (FR-R07).
+const (
+	DefaultIdleTimeout = 30 * time.Second
+	DefaultMaxConns    = 64
+	maxHeaderBytes     = 16 << 10
+	writeTimeout       = 30 * time.Second
+)
 
 // Deps are the Server's collaborators.
 type Deps struct {
@@ -70,10 +84,19 @@ func New(cfg Config, d Deps) *Server {
 	if cfg.RetryAfter <= 0 {
 		cfg.RetryAfter = DefaultRetryAfter
 	}
+	if cfg.IdleTimeout <= 0 {
+		cfg.IdleTimeout = DefaultIdleTimeout
+	}
+	if cfg.MaxConns <= 0 {
+		cfg.MaxConns = DefaultMaxConns
+	}
 	s := &Server{cfg: cfg, d: d}
 	s.http = &http.Server{
 		Handler:           s,
 		ReadHeaderTimeout: 5 * time.Second,
+		IdleTimeout:       cfg.IdleTimeout,
+		WriteTimeout:      writeTimeout,
+		MaxHeaderBytes:    maxHeaderBytes,
 		ConnContext: func(ctx context.Context, c net.Conn) context.Context {
 			if d.PeerCred == nil {
 				return context.WithValue(ctx, callerKey{}, callerState{err: errors.New("no peer credential reader")})
@@ -91,7 +114,7 @@ func (discardAudit) Emit(context.Context, domain.AuditEvent) {}
 
 // Serve accepts connections on ln until Shutdown or Close.
 func (s *Server) Serve(ln net.Listener) error {
-	err := s.http.Serve(ln)
+	err := s.http.Serve(newLimitListener(ln, s.cfg.MaxConns))
 	if errors.Is(err, http.ErrServerClosed) {
 		return nil
 	}

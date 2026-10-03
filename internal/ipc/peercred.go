@@ -11,6 +11,9 @@ var ErrPeerCredUnsupported = errors.New("peer credentials unsupported on this pl
 
 // unixConn extracts the underlying unix connection.
 func unixConn(conn net.Conn) (*net.UnixConn, error) {
+	if lc, ok := conn.(*limitConn); ok {
+		conn = lc.Conn // see limit.go
+	}
 	uc, ok := conn.(*net.UnixConn)
 	if !ok {
 		return nil, errors.New("not a unix connection")

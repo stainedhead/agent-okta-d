@@ -93,7 +93,7 @@ type Env struct {
 func DefaultEnv() Env {
 	return Env{
 		Clock:    RealClock{},
-		HTTP:     &http.Client{Timeout: 15 * time.Second},
+		HTTP:     domain.NoRedirect(&http.Client{Timeout: 15 * time.Second}),
 		Sink:     sink.New(),
 		PeerCred: ipc.NewPeerCred(),
 		Host:     osHost{},

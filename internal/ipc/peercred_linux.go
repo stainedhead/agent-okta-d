@@ -10,7 +10,8 @@ import (
 )
 
 // PeerCred reads SO_PEERCRED. Linux reports uid, gid and pid, but not the
-// peer's supplementary groups, so only the primary gid is checked.
+// peer's supplementary groups; those are read from /proc/<pid>/status (see
+// groupsOf). When /proc is unreadable only the primary gid is checked.
 type PeerCred struct{}
 
 // NewPeerCred returns the platform peer-credential reader.
@@ -30,5 +31,6 @@ func (PeerCred) Read(conn net.Conn) (domain.CallerInfo, error) {
 	if serr != nil {
 		return domain.CallerInfo{}, serr
 	}
-	return domain.CallerInfo{UID: int(ucred.Uid), GID: int(ucred.Gid), PID: int(ucred.Pid), Exe: exeOf(int(ucred.Pid))}, nil
+	pid := int(ucred.Pid)
+	return domain.CallerInfo{UID: int(ucred.Uid), GID: int(ucred.Gid), PID: pid, Exe: exeOf(pid), Groups: groupsOf(pid)}, nil
 }
