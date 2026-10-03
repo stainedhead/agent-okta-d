@@ -46,7 +46,7 @@ The agent process never handles OIDC, never reads a long-lived secret, and never
 - Authorization decisions. The boundary is always *server side* (IAM, GitHub teams/rulesets, ServiceNow roles/ACLs, Atlassian permissions, Exchange/Teams policy). The daemon only gets credentials; it does not decide what they may do.
 - Human login. Humans use `snow auth login` (PKCE) or their normal SSO; the daemon serves agents only.
 - Model-provider (LLM) credentials. Out of scope, though the generic `secret` provider (§7.4) could carry them later.
-- Windows hosts (v1). macOS and Linux only; see Open Questions.
+- Native Windows hosts. macOS and Linux only; Windows machines run the Linux build under WSL2 (REL-1b; service support under WSL2 is unconfirmed, see the CI/CD open items).
 - An MCP gateway/proxy. Revisit only if the harness cannot inject MCP headers (§7.4).
 
 ## 4. Deployment topologies
@@ -572,7 +572,7 @@ Disabling the Okta app stops **new** tokens. Credentials already issued live unt
 
 ## 16. Open questions
 
-1. Which OS(es) will agent hosts run? (Windows excluded for v1.)
+1. Which OS(es) will agent hosts run? (Native Windows is excluded; WSL2 uses the Linux build.)
 2. Can Hermes re-read MCP headers/config without restart? Does it let us set per-command environment or PATH shims?
 3. Does the org require signed commits? Are agent approvals allowed to count toward required reviews? Is the GitHub CLI's OAuth app (or another OAuth app) permitted for EMU users, and what is the PAT policy (max lifetime, approval, classic PATs)?
 4. What is the ServiceNow release, and is the third-party-token flow enabled and approved by your ServiceNow platform team?
@@ -606,7 +606,7 @@ Applies to this repository only; the Go repositories in the set (`agent-okta-d`,
 | ID | Target | Build | Artifact |
 |---|---|---|---|
 | REL-1a | **macOS, Apple silicon** | `darwin/arm64` | `.tar.gz` containing the `agent-okta-d` binary, signed and notarized with an Apple Developer ID (§12 already requires Apple notarization and `cosign`). The macOS Keychain and Secure Enclave signers (§4, topology B) may need cgo, which means the darwin build runs on a macOS runner, not a cross-compile ⚠️. |
-| REL-1b | **Windows via WSL** | `linux/amd64` (and `linux/arm64` for WSL on Arm, see 17.7) | `.tar.gz`; WSL runs Linux binaries, so **this is the Linux build** and no native Windows `.exe` is produced. Native Windows is not a target. |
+| REL-1b | **Windows via WSL2** | `linux/amd64` (and `linux/arm64` for WSL on Arm, see 17.7) | `.tar.gz`; WSL runs Linux binaries, so **this is the Linux build** and no native Windows `.exe` is produced. Native Windows is not a target. |
 | REL-1c | **Linux, AWS-hosted container** | `linux/amd64` and `linux/arm64` (Graviton) | Multi-arch **OCI image** `ghcr.io/stainedhead/agent-okta-d:vX.Y.Z`, non-root, minimal base, plus the same Linux binaries as `.tar.gz` |
 
 Common to all targets:

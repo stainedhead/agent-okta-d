@@ -27,7 +27,7 @@ Agents are LLM-driven processes with a shell. They should never handle OIDC, rea
 - Credentials refresh proactively, fail closed, and are logged and audited with a redaction layer so no secret is logged.
 - The kill switch has two parts: disable the agent's Okta application and disable the agent's user account. Credentials already issued live until their own expiry, so exposure windows are documented per system (PRD section 13).
 - Authorization is never decided by the daemon; it stays server side (IAM, GitHub rulesets, ServiceNow roles/ACLs, Atlassian permissions, Exchange/Teams policy).
-- Planned in Go (static binary, macOS and Linux; Windows is out of scope for v1).
+- Planned in Go (static binary, macOS and Linux; native Windows is not a target; Windows machines use WSL2 with the Linux build).
 
 ## Evidence caveats
 

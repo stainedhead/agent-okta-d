@@ -53,7 +53,7 @@ The shared CLI core is its own repository, [`agent-cli-core`](https://github.com
 - **Authorization decisions.** These stay server side (IAM, GitHub rulesets, ServiceNow roles/ACLs,
   Atlassian permissions, Exchange/Teams policy). The daemon only obtains credentials.
 - **Human login.** The daemon serves agents only.
-- **Model-provider (LLM) credentials**, **Windows hosts** (v1) and an **MCP gateway/proxy**.
+- **Model-provider (LLM) credentials**, **Native Windows hosts** (Windows machines use WSL2 and the Linux build) and an **MCP gateway/proxy**.
 - **The CLIs, the harness images or the fleet.** Those belong to the sibling repositories and to
   whoever deploys the agents.
 
