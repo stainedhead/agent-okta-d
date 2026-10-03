@@ -5,7 +5,7 @@
 | **Status** | Draft v0.2 |
 | **Date** | 2026-10-03 |
 | **Owner** | Enterprise Architecture (owner TBD) |
-| **Companion docs** | `snow-cli-PRD.md` (ServiceNow CLI and the shared CLI core), `outlook-cli-PRD.md`, `teams-cli-PRD.md` |
+| **Companion docs** | `agent-cli-core-PRD.md` (the shared CLI core library, own repo: https://github.com/stainedhead/agent-cli-core), `snow-cli-PRD.md` (ServiceNow CLI), `outlook-cli-PRD.md`, `teams-cli-PRD.md` |
 | **Scope** | Credential daemon that gives autonomous SDLC agents (each a named user account) access to AWS, GitHub, ServiceNow, Atlassian and Microsoft 365 (Outlook, Teams), rooted in Okta OIDC where the target system accepts it |
 
 **Evidence legend.** ✅ = confirmed against vendor documentation during research for this PRD (2026-10-03). ⚠️ = not confirmed in vendor docs this session (community source, third-party doc, or engineering judgment). Validate every ⚠️ item in a sandbox before depending on it.
@@ -375,7 +375,7 @@ internal/cache/          entry state machine, single-flight, scheduler
 internal/ipc/            unix-socket server, peercred, handlers
 internal/sink/           atomic file writer
 internal/obs/            logging+redaction, audit, metrics
-pkg/client/              Go client library (used by snow, outlook, teams CLIs)
+pkg/client/              Go client library (consumed by agent-cli-core's `auth` package; the snow, outlook, teams CLIs get it through the core)
 ```
 
 **Core interfaces**
@@ -586,7 +586,7 @@ Disabling the Okta app stops **new** tokens. Credentials already issued live unt
 
 ## 17. CI/CD and release requirements
 
-Applies to this repository only; the four Go repositories in the set (`agent-okta-d`, `snow-cli`, `outlook-cli`, `teams-cli`) use the same pipeline shape so a pipeline change is made once and copied. Pipelines are GitHub Actions workflows under `.github/workflows/`. The scaffolded `ci.yml` is a starting point and must be brought in line with this section. Items marked ⚠️ are not confirmed against vendor documentation and need a spike before the pipeline depends on them.
+Applies to this repository only; the Go repositories in the set (`agent-okta-d`, `agent-cli-core`, `snow-cli`, `outlook-cli`, `teams-cli`) use the same pipeline shape so a pipeline change is made once and copied. Pipelines are GitHub Actions workflows under `.github/workflows/`. The scaffolded `ci.yml` is a starting point and must be brought in line with this section. Items marked ⚠️ are not confirmed against vendor documentation and need a spike before the pipeline depends on them.
 
 **Terminology.** *CI* verifies a change. *CD* produces and publishes a **release**: a semver-versioned set of signed artifacts. **Publishing a release is the whole of "deploy" in this section.** Rolling a release out to agent hosts, harness images or AWS accounts is the swarm owner's job (see REL-12).
 
@@ -622,7 +622,7 @@ Common to all targets:
 |---|---|
 | REL-5 | Releases follow **semantic versioning** (`MAJOR.MINOR.PATCH`). The git tag `vX.Y.Z` on `main` is the release identity. Tags are immutable: a version is never re-tagged or re-published. |
 | REL-6 | Releases start at `0.1.0` and stay `0.y.z` while this PRD is a draft. `1.0.0` is cut by an explicit decision, never automatically. |
-| REL-7 | The bump is taken from a **PR label** (`release:major`, `release:minor`, `release:patch`). An unlabeled PR that changes shipped code defaults to `patch`. A PR that touches only `docs/`, `user-docs/`, `specs/`, `*.md` or `INTENT.md` does **not** cause a release. `pkg/client` (§9) is part of the same Go module, so it takes the same version. A breaking change to `pkg/client` is a `major` bump, and from `v2` the module path needs the `/v2` suffix. The `snow`, `outlook` and `teams` CLIs pin a released `pkg/client` version. |
+| REL-7 | The bump is taken from a **PR label** (`release:major`, `release:minor`, `release:patch`). An unlabeled PR that changes shipped code defaults to `patch`. A PR that touches only `docs/`, `user-docs/`, `specs/`, `*.md` or `INTENT.md` does **not** cause a release. `pkg/client` (§9) is part of the same Go module, so it takes the same version. A breaking change to `pkg/client` is a `major` bump, and from `v2` the module path needs the `/v2` suffix. `agent-cli-core` (whose `auth` package wraps `pkg/client`) pins a released `pkg/client` version, and the `snow`, `outlook` and `teams` CLIs get it transitively through the core. |
 
 ### 17.4 Continuous delivery
 
@@ -643,9 +643,13 @@ Common to all targets:
 - **Exposure drill:** the kill-switch drill (§13, M5) is a manual, on-demand activity and is not part of release CD.
 - **Harness integration:** whether Hermes can consume the daemon's outputs as §16 question 2 asks is confirmed in M0, not by the pipeline.
 
+- **Importable `pkg/client` (DEP-1).** `pkg/client` must be importable at a released semver tag of this module. The first tagged release (even `0.1.0`, containing only `pkg/client`) must exist before `agent-cli-core` can compile against it, so it comes early in the delivery plan, ahead of the daemon being functionally complete.
+- **Breaking changes (DEP-2).** A breaking change to `pkg/client` is a `major` bump (REL-7; from `v2` the module path needs `/v2`). The downstream compatibility check lives in `agent-cli-core`'s CI, which must catch such a break; this repository does not build the consumers.
+- **CI token and visibility (DEP-3).** This repository depends on no other repository in the set, so its CI needs no dependency-fetch token step, and its workflows keep `permissions: contents: read`. `agent-cli-core` and the CLIs fetch this module in their CI with the dynamic `GITHUB_TOKEN` and `packages: read`. ⚠️ Unconfirmed: `GITHUB_TOKEN` is scoped to the repository running the workflow, so if this repository is ever made private it must be published through GitHub Packages with the consumer repositories granted read on the package. Decide this before any visibility change.
+
 ### 17.6 Milestone placement
 
-BLD-1 to BLD-6 are in place before the first milestone that merges Go code. The release pipeline (REL-1 to REL-14) is in place before the first tagged build, and no later than the first milestone that produces a runnable binary. Release signing and notarization may land later, in the hardening milestone, but unsigned builds are labelled pre-release until then.
+BLD-1 to BLD-6 are in place before the first milestone that merges Go code. The release pipeline (REL-1 to REL-14) is in place before the first tagged build, and no later than the first milestone that produces a runnable binary. Release signing and notarization may land later, in the hardening milestone, but unsigned builds are labelled pre-release until then. The first `pkg/client` tag (DEP-1) is cut early, before M1 completes, because `agent-cli-core` is blocked on it; it needs only BLD-1 to BLD-6 and a tag, not the full release pipeline (REL-1 to REL-14).
 
 ### 17.7 Open items (CI/CD)
 
@@ -654,7 +658,7 @@ BLD-1 to BLD-6 are in place before the first milestone that merges Go code. The 
 3. **What "deploy" means.** This section treats it as publishing a release (REL-12). Confirm that no automatic rollout into an AWS environment is wanted.
 4. **Version bump rule.** PR labels are assumed (REL-7). Conventional commits are the alternative.
 5. **WSL on Arm.** Is `linux/arm64` for WSL wanted, or `linux/amd64` only?
-6. **Shared pipeline.** Should the common workflow steps live in one reusable workflow? Where it lives is tied to the open question of where `agent-cli-core` lives; it is not decided here.
+6. **Shared pipeline.** Should the common workflow steps live in one reusable workflow? `agent-cli-core` is its own repository (https://github.com/stainedhead/agent-cli-core), so a reusable workflow could live there or in a dedicated repository; that part stays open and is not decided here.
 7. **WSL service support.** Running the daemon's service definition under WSL needs systemd in the WSL distribution ⚠️; confirm before documenting it as supported. Applies only where this tool installs a service.
 
 ## Appendix A — Sources consulted

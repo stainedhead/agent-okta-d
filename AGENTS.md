@@ -8,6 +8,8 @@ Rules for AI agents and human contributors working in this repository.
 
 Status: Draft PRD (`agent-okta-d-PRD.md`), no implementation yet. The PRD is the source of truth; its evidence legend (confirmed vs. unconfirmed items) must be preserved when summarising it.
 
+`pkg/client` is consumed by [`agent-cli-core`](https://github.com/stainedhead/agent-cli-core), the shared CLI core library (its own repo); the `snow`, `outlook` and `teams` CLIs reach the daemon through the core.
+
 ## Doc routing
 
 - Goal, direction or scope shift: update `INTENT.md` (why this tool exists and its wider context).
@@ -20,7 +22,7 @@ Status: Draft PRD (`agent-okta-d-PRD.md`), no implementation yet. The PRD is the
 INTENT.md           why this exists and what it is for
 cmd/agent-okta-d/   subcommands, signal handling, exit codes
 internal/           config, signer, okta, provider, store, enroll, cache, ipc, sink, obs
-pkg/client/         Go client library used by the snow, outlook and teams CLIs
+pkg/client/         Go client library consumed by agent-cli-core (its auth package); the CLIs get it via the core
 docs/               product and technical documentation
 user-docs/          end-user documentation only (see rule below)
 specs/              feature specs; completed specs go to specs/archive/

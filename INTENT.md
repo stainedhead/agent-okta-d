@@ -30,13 +30,14 @@ agent host: harness (Hermes / CLI) in a container -> daemon + CLIs -> Okta -> AW
 |---|---|
 | [`agentic-teams`](https://github.com/stainedhead/agentic-teams) | The root map of the set. Describes this repo's place; holds no code. |
 | [`agentic-team-w-paperclip`](https://github.com/stainedhead/agentic-team-w-paperclip) | Provides the harness images the agent runs in. The daemon is deployed beside the agent on that host. |
-| [`snow-cli`](https://github.com/stainedhead/snow-cli) | `snow` (ServiceNow). Gets its Okta token from the daemon. Also defines the shared CLI core. |
+| [`snow-cli`](https://github.com/stainedhead/snow-cli) | `snow` (ServiceNow). Gets its Okta token from the daemon. Builds on the shared CLI core. |
+| [`agent-cli-core`](https://github.com/stainedhead/agent-cli-core) | Library (no binary) the CLIs build from. Its `auth` package wraps this repo's `pkg/client`. |
 | [`outlook-cli`](https://github.com/stainedhead/outlook-cli) | `outlook` (mail as the agent's Entra user). Gets a delegated Graph token from the daemon. |
 | [`teams-cli`](https://github.com/stainedhead/teams-cli) | `teams` (Teams as the agent's Entra user). Gets a delegated Graph token from the daemon. |
 
 Stock tools (`aws`, `git`, `gh`) stay unmodified and are fed through their native credential
-mechanisms. The CLIs reach the daemon through the Go client library planned here (`pkg/client`).
-Where the shared CLI core (`agent-cli-core`) will live is an open question and is not decided here.
+mechanisms. The CLIs reach the daemon through the core's `auth` package, which wraps the Go client library planned here (`pkg/client`).
+The shared CLI core is its own repository, [`agent-cli-core`](https://github.com/stainedhead/agent-cli-core) (decided).
 
 ## Goals
 - **No long-lived secret is readable by the agent's OS user.** The daemon and the agent run as

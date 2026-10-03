@@ -37,19 +37,20 @@ The PRD marks each claim with an evidence legend: a check mark means confirmed a
 
 This repository is one of a set of related projects:
 
-- [`snow-cli`](https://github.com/stainedhead/snow-cli): the ServiceNow CLI and the shared CLI core.
+- [`snow-cli`](https://github.com/stainedhead/snow-cli): the ServiceNow CLI, built on the shared CLI core.
+- [`agent-cli-core`](https://github.com/stainedhead/agent-cli-core): the shared CLI core library; its `auth` package wraps this repo's `pkg/client`.
 - [`outlook-cli`](https://github.com/stainedhead/outlook-cli): agent-safe Outlook mail access.
 - [`teams-cli`](https://github.com/stainedhead/teams-cli): agent-safe Microsoft Teams access.
 - [`agentic-team-w-paperclip`](https://github.com/stainedhead/agentic-team-w-paperclip): part of the set rooted at [`agentic-teams`](https://github.com/stainedhead/agentic-teams).
 
-The `snow`, `outlook` and `teams` CLIs obtain their credentials from this daemon (via the Go client library planned in `pkg/client`).
+The `snow`, `outlook` and `teams` CLIs obtain their credentials from this daemon through [`agent-cli-core`](https://github.com/stainedhead/agent-cli-core), whose `auth` package is the consumer of the Go client library planned in `pkg/client`.
 
 ## Planned layout
 
 ```
 cmd/agent-okta-d/   subcommands, signal handling, exit codes
 internal/           config, signer, okta, provider, store, enroll, cache, ipc, sink, obs
-pkg/client/         Go client library used by the snow, outlook and teams CLIs
+pkg/client/         Go client library consumed by agent-cli-core's auth package
 docs/               product and technical documentation
 user-docs/          end-user documentation (install, configure, use, troubleshoot)
 specs/              feature specs (completed specs in specs/archive/)
