@@ -677,7 +677,7 @@ Agents that adopt this tool need to know how to use it. That knowledge is a **sk
 
 ### 18.1 Open items (agent skill)
 
-1. **Updating the root from this repository's release.** Publishing a change to another repository's `skills/` folder needs write access to that repository. The workflow's dynamic `GITHUB_TOKEN` is scoped to the repository running the workflow ⚠️, so release CD cannot do it with the token this PRD otherwise requires. Options: a manual pull request opened from the release artifact (assumed until decided), a GitHub App installation token, or a fine-grained personal access token. Decide before automating.
+1. **Updating the root from this repository's release (decided for now: manual pull request).** A change to another repository's `skills/` folder needs write access to that repository, and the workflow's dynamic `GITHUB_TOKEN` is scoped to the repository running the workflow ⚠️. So for now the skill is updated by a **manual pull request** against `agentic-teams` that puts the release's generated skill (or the hand-written change) at `skills/agent-okta-d.md`. Opening it is part of the release checklist, and a release is not complete until that pull request is merged (SKILL-4). Automating it with a GitHub App installation token or a fine-grained personal access token is deferred and would be decided separately.
 2. **Skill for the library and for the daemon.** `agent-cli-core` has a shared-conventions skill, `skills/agent-cli-core.md`, that the three CLI skills link to; whether the daemon's skill should also be offered to agents that do not use the CLIs is not decided.
 
 ## Appendix A — Sources consulted
