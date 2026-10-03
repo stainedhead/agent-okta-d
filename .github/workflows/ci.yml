@@ -1,8 +1,9 @@
 name: CI
 
 # Implements the BLD-1..BLD-6 requirements in this repository's PRD (CI/CD section).
-# Steps that need Go source are skipped while the repository has no .go files, so
-# CI passes trivially now and starts enforcing as soon as code lands.
+# Go source now exists, so the Go steps run on every PR (they are still guarded by
+# hashFiles so a docs-only checkout of an empty tree cannot fail). No secrets or
+# network access to real systems are needed (BLD-4).
 
 on:
   pull_request:
@@ -44,6 +45,9 @@ jobs:
       - name: go test
         if: hashFiles('**/*.go') != ''
         run: go test -race ./...
+      - name: coverage gate (80 percent internal, 90 percent pkg/client)
+        if: hashFiles('**/*.go') != ''
+        run: make cover
       - name: golangci-lint
         if: hashFiles('**/*.go') != ''
         uses: golangci/golangci-lint-action@v9

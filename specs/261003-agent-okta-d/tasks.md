@@ -2,14 +2,14 @@
 Date: 2026-10-03 | Status: Planning
 
 ## Progress Summary
-0/29 tasks complete
+3/29 tasks complete
 
 Format: `ID | WS | depends | est | acceptance`. All tasks: failing test first; gates (gofmt, vet, lint, `go test -race`) green.
 
 ## Phase 1 Skeleton + pkg/client (priority 1)
-- P1.1 | WS-0 | none | 2h | `internal/domain`: Credential, SecretString (redacts in fmt, %#v, JSON, slog), states, error taxonomy, Provider/Signer/SecretStore/Clock/Deps interfaces; tests prove redaction.
-- P1.2 | WS-0 | none | 1h | go.mod deps pinned, Makefile (`fmt lint test cross`), `ci.yml` per BLD-1..6 incl. cross-compile of 3 targets; `version` stamp variables.
-- P1.3 | WS-0 | none | 1h | `docs/assumptions.md` (A-01..A-12) and `docs/m0-spike-checklist.md`; ADR-A..E in the ADR file.
+- [x] P1.1 | WS-0 | none | 2h | `internal/domain`: Credential, SecretString (redacts in fmt, %#v, JSON, slog), states, error taxonomy, Provider/Signer/SecretStore/Clock/Deps interfaces; tests prove redaction.
+- [x] P1.2 | WS-0 | none | 1h | go.mod deps pinned, Makefile (`fmt lint test cross`), `ci.yml` per BLD-1..6 incl. cross-compile of 3 targets; `version` stamp variables.
+- [x] P1.3 | WS-0 | none | 1h | `docs/assumptions.md` (A-01..A-12) and `docs/m0-spike-checklist.md`; ADR-A..E in the ADR file.
 - P1.4 | WS-A | P1.1 | 4h | `pkg/client` per CLI-1..CLI-4: constructor, calls, typed errors; godoc on all exports.
 - P1.5 | WS-A | P1.4 | 3h | `clienttest` fake daemon over unix socket; golden wire tests; example test; stdlib-only import check test (CLI-5).
 - P1.6 | WS-A | P1.4 | 1h | (P1) exported-API snapshot test (CLI-6).
