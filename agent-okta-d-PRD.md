@@ -417,6 +417,23 @@ type Credential struct {
 - Security: agent user cannot read key or sockets of other agents; `strings`/memory scan finds no private key in daemon heap dumps where feasible; token never appears in `ps`, env of child processes, or logs.
 - Failure drills: network partition, clock skew ±5 min, Okta app disabled mid-run, daemon SIGKILL (sinks left behind → wiped at next start).
 
+### 9.1 `pkg/client` public API requirements
+
+`pkg/client` is the only exported package and the contract with `agent-cli-core` (DEP-1). It must stay small, stable and documented.
+
+| ID | Requirement | Pri |
+|---|---|---|
+| CLI-1 | Exposes a `Client` constructed with `New(opts ...Option)`; options set the socket path (default from `AGENT_OKTA_D_SOCKET`, then the platform default) and the request timeout. No global state. | P0 |
+| CLI-2 | `Credential(ctx, provider) (Credential, error)` and `Refresh(ctx, provider)`, `Status(ctx)`, `Identity(ctx)` map one to one onto the §11 endpoints. `Credential` carries `TokenType`, `AccessToken` (redacting type), `IssuedAt`, `ExpiresAt`, `Audience`. | P0 |
+| CLI-3 | Typed errors usable with `errors.Is/As`: `ErrReauthRequired`, `ErrRevoked`, `ErrDegraded` (carries `RetryAfter`), `ErrUnauthorized`, `ErrNotConfigured`, `ErrDaemonUnavailable`. Mapping from HTTP status and body is documented and tested. | P0 |
+| CLI-4 | Depends only on the standard library; does not import `internal/`. Every exported identifier has a godoc comment, and a runnable `Example` exists for the main call. | P0 |
+| CLI-5 | Tested against an in-process fake daemon server over a unix socket (no real daemon, no network). Wire format (JSON field names) is covered by golden tests so it cannot drift silently. | P0 |
+| CLI-6 | API compatibility is tracked: an exported-API snapshot test fails when the surface changes, forcing a deliberate semver decision (REL-7). | P1 |
+
+### 9.2 Assumptions register (build phase)
+
+Every item marked unconfirmed (warning marker) in this document stays an explicit assumption in the implementation. Code that depends on one carries a comment `ASSUMPTION(Axx)` and the assumption is listed in `docs/assumptions.md` with the milestone-M0 spike item that would settle it. Implementation must not silently turn an assumption into a fact. External systems are never contacted during build or test; they are represented by interfaces with fakes.
+
 ## 10. Configuration reference
 
 ```yaml
@@ -517,7 +534,8 @@ macOS uses `/var/run/agentd/` (LaunchDaemon creates it); paths are configurable.
 - **Security:** daemon runs unprivileged except for socket/dir setup; no network listeners (unix socket only); config file `0640` daemon-owned; refuse to start with world-readable key files; supply chain: reproducible builds, signed releases (cosign / Apple notarization), SBOM.
 - **Availability:** a running agent must survive a 30-minute Okta outage given 60-minute AWS tokens; ServiceNow (10-minute tokens) degrades first, which is acceptable.
 - **Performance:** `token` over the socket < 10 ms when cached; cold refresh < 2 s p95.
-- **Portability:** macOS 14+ (arm64/x86_64), Linux (glibc/musl), container image for sidecar use.
+- **Portability:** build targets are `darwin/arm64`, `linux/amd64` and `linux/arm64` (matching REL-1a to REL-1c); Go 1.27; container image for sidecar use. Intel macOS and native Windows are not targets. Platform-specific code (Keychain, peercred, TPM) sits behind build tags with a portable fake or stub for every other platform.
+- **Quality gates (acceptance for every milestone):** `gofmt`, `go vet`, `golangci-lint` and `go test -race ./...` pass with no real credentials or network; coverage target >= 80 % on `internal/` packages and >= 90 % on `pkg/client`; no secret value ever appears in a test fixture or log assertion.
 - **Audit fields:** `ts, agent_id, event, provider, audience, jti, expires_at, caller_uid, caller_pid, caller_exe, result, error_class`. Ship to your SIEM; correlate with Okta System Log by `client_id` and `jti`.
 - **Retention:** per enterprise logging policy; none of these logs contain secrets by design (FR-10).
 
@@ -550,6 +568,13 @@ Disabling the Okta app stops **new** tokens. Credentials already issued live unt
 | **M4b Microsoft 365** | `msgraph` provider, `enroll msgraph`, token store, integration with `outlook` and `teams` CLIs | Agent reads and sends mail from its own mailbox only (cross-mailbox returns 403); posts a Teams chat message and receives a human reply by polling; refresh token survives 7 days of unattended runs; disabling the Entra user stops access within the measured window |
 | **M5 Hardening** | KMS/Keychain/TPM signers, kill-switch drill, packaging/signing, metrics | Drill report with measured exposure windows; security review sign-off |
 | **M6 Okta roadmap** | Evaluate Agent SSO / Okta for AI Agents | Go/no-go memo |
+
+### 14.1 Delivery constraints for the autonomous build
+
+- **M0 is not performed in the build phase.** It needs real tenants. In its place the build produces `docs/m0-spike-checklist.md`: one checklist row per unconfirmed item (what to test, expected result, which code assumption it settles). M0 acceptance remains the written spike report, produced later by humans.
+- **Out of scope for the build phase:** M6 (Okta roadmap evaluation), the Entra Agent User spike (§7.7), and all P2 items unless trivial.
+- **Build order (priority):** (1) module skeleton and `pkg/client`; (2) core daemon: config, Okta assertion, cache/scheduler, socket API, file sink, logging and redaction, `doctor`, `status`; (3) AWS; (4) GitHub; (5) ServiceNow; (6) msgraph; (7) Atlassian / `secret` provider; (8) signers (file key, KMS, Keychain, TPM) behind the `Signer` interface, verified with fakes. Signers beyond `file` are implemented against narrow interfaces (for example a `KMSAPI` interface) so no cloud SDK call is needed in tests.
+- **Test posture:** no live external system or credential ever; Okta, AWS, GitHub, ServiceNow, Graph and Atlassian are faked with local `httptest` servers and interface fakes. Integration milestones' acceptance criteria that name a real system are verified later in the sandbox; the build phase verifies the same behavior against the fakes.
 
 ## 15. Concerns and recommendations
 
