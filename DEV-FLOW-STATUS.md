@@ -3,7 +3,7 @@
 **PRD:** agent-okta-d-PRD.md
 **Spec:** specs/261003-agent-okta-d
 **Branch:** feat/agent-okta-d
-**Review PRD:** agent-okta-d-auto-review-PRD.md
+**Review PRD:** specs/261003-agent-okta-d-auto-review/agent-okta-d-auto-review-PRD.md
 **Process Start:** 2026-10-03T20:24:55Z
 **Process End:** —
 **Total Runtime:** —
