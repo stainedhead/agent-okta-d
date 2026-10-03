@@ -57,6 +57,12 @@ Where the shared CLI core (`agent-cli-core`) will live is an open question and i
   whoever deploys the agents.
 
 ## Status and caution
+**Okta's reach differs by system.** Okta directly gates AWS and ServiceNow, which accept its tokens.
+GitHub and Microsoft 365 use the agent's own user account, so access is gated by that account's state
+plus the daemon's custody of the credential, and Atlassian uses a service-account key that is not
+bound to Okta (the PRD calls it the weak link, §15). "Secured with Okta" therefore does not mean
+identical guarantees everywhere; the PRD's exposure-window table (§13) states the real differences.
+
 No code exists yet: this repository holds the draft PRD (v0.2) and a scaffold. Several provider
 details are marked unconfirmed (the PRD's warning-sign items, for example ES256 key acceptance,
 SCIM deprovisioning timing and Okta token revocation behavior). They are assumptions to validate in
