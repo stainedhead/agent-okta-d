@@ -18,12 +18,15 @@ Findings: 0 P0, 2 P1, 8 P2. Verdict: Approve with minor comments (P1 items shoul
 
 ## 2. Functional requirements (one per finding)
 
-### FR-R01 (P1): No production-grade signer or AWS adapter exists in the shipped binary
-Evidence: `internal/app/env.go` leaves `KMS`, `SecretsManager` and `STS` nil in `DefaultEnv`. `internal/signer/keychain/open_darwin.go`, `internal/signer/tpm/open_linux.go` and `internal/store/keychain/native_darwin.go` return `ErrConfig`. The `file` signer's own doc says "dev only". Consequences: the only working signer keeps the private key on disk readable by the daemon uid, which weakens G1 and the "key the agent can never read" story. The `atlassian` provider (needs `aws-secretsmanager`) and the AWS `doctor` probe cannot run. The shipped binary therefore delivers 3 of the 5 target systems end to end (GitHub, ServiceNow, msgraph, plus AWS minus its probe). `status.md` and the user-docs state this accurately, and AC-015 only demands compile-ability, so this is a follow-up and not a spec violation.
-Acceptance criteria:
-- At least one non-file signer (KMS via the AWS SDK adapter) is implemented behind `kms.KMSAPI`, selectable through `DefaultEnv`, with a contract test reusable against a sandbox.
-- `SecretsManagerAPI` and `STSClient` have production adapters, so `atlassian` and the AWS doctor probe pass against fakes and the real SDK in a manual spike.
-- Until then, `agent-okta-d run` logs a WARN at startup when `signer.type: file` is used, and `doctor` marks it `warn`. Today the only notice is in the docs.
+### FR-R01 (P1, DEFERRED): No production-grade signer or AWS adapter exists in the shipped binary
+Status: **Deferred with rationale; not implemented in this fix cycle.** Real AWS SDK KMS, SecretsManager and STS adapters cannot be verified without live AWS and no live systems or credentials are ever used in this workflow. Fakes-only tests would verify nothing about the real SDK behavior, and the AWS SDK dependency would need a separate CGO_ENABLED=0 three-target compile and size assessment. It is tracked as a follow-up requiring a sandbox AWS account.
+Evidence: `internal/app/env.go` leaves `KMS`, `SecretsManager` and `STS` nil in `DefaultEnv`. `internal/signer/keychain/open_darwin.go`, `internal/signer/tpm/open_linux.go` and `internal/store/keychain/native_darwin.go` return `ErrConfig`. The `file` signer's own doc says "dev only". The only working signer keeps the private key on disk readable by the daemon uid, which weakens G1. The `atlassian` provider and the AWS `doctor` probe cannot run. `status.md` and user-docs state this accurately, and AC-015 only demands compile-ability, so this is a follow-up and not a spec violation.
+Acceptance criteria (deferred follow-up, not part of this cycle):
+- A KMS signer via the AWS SDK adapter behind `kms.KMSAPI`, selectable through `DefaultEnv`, with a contract test reusable against a sandbox.
+- Production `SecretsManagerAPI` and `STSClient` adapters, verified against the real SDK in a manual spike.
+Acceptance criteria (in scope now, fakes and local only, no new dependency):
+- `agent-okta-d run` logs a WARN at startup when `signer.type: file` is used, and `doctor` marks it `warn`, asserted by unit tests.
+- `status.md` and `docs/` list FR-R01 once as a deferred follow-up with this rationale.
 
 ### FR-R02 (P1): One provider's "definitive" Okta rejection revokes every provider and exits the daemon
 Evidence: `internal/okta/client.go` `definitive` treats `access_denied` and `invalid_grant` as `ErrAuthDefinitive`. `internal/cache/cache.go` `handleFailure` counts confirmations per entry (`e.firstDef`) but `revokeLocked` in `internal/cache/sched.go` withdraws all entries, and `Run` exits 77 (supervisors then stop restarting). An authorization-server access policy or scope denial on a single provider (for example ServiceNow) that Okta reports as `access_denied` can therefore kill AWS and GitHub credentials as well. This is outside the "app disabled or key removed" intent. `access_denied` and `invalid_grant` for a client_credentials grant are also unconfirmed against a real Okta tenant.
@@ -94,3 +97,30 @@ Acceptance criteria:
 | Coverage | all packages 90 % or higher |
 | `go test -fuzz` on `internal/obs`, 10 s | pass, 238k execs |
 | Import graph (domain, pkg/client stdlib only; adapters depend on domain only) | pass |
+
+## 4. Scope, priorities and constraints
+
+Goals: fix FR-R02 through FR-R10 and the in-scope part of FR-R01 (startup/doctor warning) on this branch.
+Non-goals: real AWS SDK adapters (FR-R01 deferred), any use of live systems, real Okta tenants, cloud accounts or credentials, new architecture, and changes to the public `pkg/client` API.
+Priorities: no P0 exists (no true blockers). P1 items (FR-R01 warning, FR-R02) are fixed first; P2 items follow in numeric order. FR-R03 may be promoted to P1 if the fix is trivial.
+
+## 5. Non-functional requirements
+- Security: every fix keeps fail-closed behavior and must not log or echo secrets; FR-R02/R03/R04/R07/R08 are security hardening and need negative tests.
+- Reliability: `go test -race ./...` passes, with `-count=3` on cache, ipc and app; no new flakiness.
+- Performance: no measurable regression on the cache/IPC hot path; connection cap must not delay allowed callers.
+- Observability: new denial, refusal and warn paths emit structured, scrubbed log lines and are visible in `doctor`.
+- Portability: builds with `CGO_ENABLED=0` for darwin/arm64, linux/amd64, linux/arm64; coverage stays at 90 % or higher per package; gofmt, vet and golangci-lint stay clean.
+
+## 6. Dependencies
+Go stdlib only (no new module dependencies, no AWS SDK). FR-R10 macOS CI job depends on GitHub Actions macOS runners (workflow change only; cannot be run locally). FR-R02 depends on documented Okta error semantics, which remain unverified against a real tenant. FR-R09 skill-PR follow-up depends on the root repo owner.
+
+## 7. Open questions
+- Which Okta error codes should be global-revoking: only `invalid_client` and `unauthorized_client`, or configurable? (FR-R02; default: the narrow set.)
+- Linux supplementary groups (FR-R05): implement `/proc` resolution or document the limitation? (default: document, implement only if cheap and fail-closed.)
+- Who owns the skill-PR follow-up and the FR-R01 sandbox spike? (FR-R09)
+
+## 8. Implementation guidance
+- Use TDD: write the failing test from each acceptance criterion first, then the fix.
+- Run a code review after each fix (dev-flow:review-code or an agent teammate) before moving to the next.
+- Use agent teammates for independent fixes (for example ipc cluster FR-R04/R05/R07, security cluster FR-R03/R06/R08, process cluster FR-R09/R10), each in its own git worktree to avoid conflicts, merging back to `feat/agent-okta-d`.
+- Never run against live systems or with real credentials; use fakes and httptest only. Never push to main.
