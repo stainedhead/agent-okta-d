@@ -51,7 +51,7 @@ Built and fake-tested: the daemon (`run`), unix-socket API with peer-credential 
 
 Not usable in the shipped binary: the `kms`, `keychain` and `tpm` signers, the `aws-secretsmanager` and `keychain` stores, and therefore the `atlassian` provider and the AWS `doctor` probe (the AWS SDK adapters and hardware backends are deferred; a config needing them exits 78). The only working signer is `file` (development use) and the only working store is `file-encrypted`.
 
-Unverified: all vendor behavior listed in [`docs/assumptions.md`](docs/assumptions.md) (A-01 to A-12). The real-tenant M0 spikes are replaced by [`docs/m0-spike-checklist.md`](docs/m0-spike-checklist.md) and have not been run. Also deferred: M6 Okta roadmap evaluation, the Entra Agent User spike, P1/P2 items (metrics, hot reload, memory hygiene, GH-10/11/12, MG-7/8, AT-2c, AWS-6, SN-5). Release workflows (build, sign, notarize, publish) are not part of this work; only CI exists. Details: [`docs/product-details.md`](docs/product-details.md).
+Unverified: all vendor behavior listed in [`docs/assumptions.md`](docs/assumptions.md) (A-01 to A-12 and A-20). The real-tenant M0 spikes are replaced by [`docs/m0-spike-checklist.md`](docs/m0-spike-checklist.md) and have not been run. Also deferred: M6 Okta roadmap evaluation, the Entra Agent User spike, P1/P2 items (metrics, hot reload, memory hygiene, GH-10/11/12, MG-7/8, AT-2c, AWS-6, SN-5). Release workflows (build, sign, notarize, publish) are not part of this work; only CI exists. Details: [`docs/product-details.md`](docs/product-details.md).
 
 ## Layout
 

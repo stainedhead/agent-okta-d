@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stainedhead/agent-okta-d/internal/domain"
@@ -303,5 +304,24 @@ func TestUnsupportedKeyTypeEd25519(t *testing.T) {
 	p := writeKey(t, "PRIVATE KEY", pkcs8(t, priv), 0o600)
 	if _, err := file.New(file.Config{Path: p, KID: "k"}); !errors.Is(err, domain.ErrConfig) {
 		t.Fatalf("got %v", err)
+	}
+}
+
+// FR-R10: errors name the config key the caller says holds the path.
+func TestPathFieldNamedInErrors(t *testing.T) {
+	_, err := file.New(file.Config{Path: "/nonexistent/key.pem", KID: "k", PathField: "okta.signer.key_id"})
+	if err == nil || !strings.Contains(err.Error(), "okta.signer.key_id") {
+		t.Fatalf("got %v", err)
+	}
+	_, err = file.New(file.Config{Path: "/nonexistent/key.pem", KID: "k"})
+	if err == nil || !strings.Contains(err.Error(), "okta.signer.path") {
+		t.Fatalf("default: %v", err)
+	}
+	bad := filepath.Join(t.TempDir(), "bad.pem")
+	if werr := os.WriteFile(bad, []byte("not pem"), 0o600); werr != nil {
+		t.Fatal(werr)
+	}
+	if _, err = file.New(file.Config{Path: bad, KID: "k", PathField: "x.y"}); err == nil || !strings.Contains(err.Error(), "x.y") {
+		t.Fatalf("parse error field: %v", err)
 	}
 }

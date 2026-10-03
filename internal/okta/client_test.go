@@ -163,7 +163,7 @@ func TestTokenMalformedResponsesAreProviderErrors(t *testing.T) {
 }
 
 func TestTokenDefinitiveErrors(t *testing.T) {
-	for _, code := range []string{"invalid_client", "unauthorized_client", "invalid_grant", "access_denied"} {
+	for _, code := range []string{"invalid_client", "unauthorized_client"} {
 		for _, status := range []int{400, 401, 403} {
 			f := newFakeOkta(t, func(w http.ResponseWriter, _ *http.Request) { errBody(w, status, code) })
 			c, _ := newClient(t, f)
@@ -178,6 +178,19 @@ func TestTokenDefinitiveErrors(t *testing.T) {
 			if strings.Contains(err.Error(), "TOKEN-LEAK") {
 				t.Errorf("server text leaked into error: %v", err)
 			}
+		}
+	}
+}
+
+// FR-R02: access_denied and invalid_grant can be a per-provider policy or scope
+// denial, so they must never be a global-revocation trigger.
+func TestTokenPolicyDenialsAreProviderErrors(t *testing.T) {
+	for _, code := range []string{"access_denied", "invalid_grant"} {
+		f := newFakeOkta(t, func(w http.ResponseWriter, _ *http.Request) { errBody(w, 400, code) })
+		c, _ := newClient(t, f)
+		_, err := c.Token(context.Background(), awsReq)
+		if !errors.Is(err, domain.ErrProvider) || errors.Is(err, domain.ErrAuthDefinitive) || errors.Is(err, domain.ErrTransient) {
+			t.Errorf("%s: got %v", code, err)
 		}
 	}
 }

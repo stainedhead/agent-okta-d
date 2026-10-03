@@ -16,3 +16,4 @@ M0 (PRD section 14) needs real tenants and is not performed in the build phase. 
 | A-10 | Sign with a real KMS ECC key and verify the JOSE signature at Okta | R and S conversion verifies | `internal/signer/kms` DER to JOSE conversion | [ ] |
 | A-11 | Install the systemd unit under WSL2 on amd64 and arm64 | Daemon starts and restarts per policy, or WSL needs another supervisor | Install documentation for WSL | [ ] |
 | A-12 | Notarize a darwin/arm64 build with a Developer ID and build the Keychain signer with and without cgo | Signed build runs; cgo requirement known | Keychain signer build tags, CD macOS runner | [ ] |
+| A-20 | On a sandbox tenant, deny one auth server with an access policy or remove a scope grant, then request a client_credentials token; separately disable the app | Policy denial returns `access_denied` or `invalid_grant` and affects only that provider; a disabled app returns `invalid_client` | `internal/okta` `definitive` set | [ ] |

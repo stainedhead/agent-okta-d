@@ -75,6 +75,11 @@ func (d *Daemon) selfTest(ctx context.Context, probe bool) (rep Report, refuse m
 		return rep, refuse, err
 	}
 	add("signer", StatusOK, d.cfg.Okta.Signer.Type+" signer ready, kid "+d.cfg.Okta.Signer.KID)
+	if d.cfg.Okta.Signer.Type == "file" {
+		// FR-R01 (in scope part): the only signer in this build keeps the private
+		// key on disk readable by the daemon uid, which weakens goal G1.
+		add("signer-hardening", StatusWarn, "file signer is for dev only: the private key is readable by the daemon uid; production needs a KMS, Keychain or TPM signer (not yet available in this build)")
+	}
 
 	if d.okta != nil {
 		skew, err := d.okta.CheckSkew(ctx)

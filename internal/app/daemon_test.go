@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -420,4 +421,46 @@ func (f failingFirstHead) RoundTrip(r *http.Request) (*http.Response, error) {
 		return nil, errors.New("network down")
 	}
 	return f.next.RoundTrip(r)
+}
+
+// FR-R01 (in scope): the file signer keeps the key on disk readable by the
+// daemon uid, so doctor marks it warn and startup logs a WARN.
+func TestFileSignerWarnsInDoctorAndAtStartup(t *testing.T) {
+	f := newFixture(t, fixOpt{})
+	f.env.STS = fakeSTS{arn: goodARN}
+	d, err := New(f.cfg, f.env, DefaultRegistry())
+	if err != nil {
+		t.Fatal(err)
+	}
+	rep := d.Doctor(context.Background())
+	var found bool
+	for _, c := range rep.Checks {
+		if c.Name == "signer-hardening" {
+			found = true
+			if c.Status != StatusWarn || !strings.Contains(c.Detail, "dev only") {
+				t.Errorf("check %+v", c)
+			}
+		}
+	}
+	if !found || rep.Failed() {
+		t.Fatalf("missing warn or failed: %+v", rep.Checks)
+	}
+	// startup path: logged at WARN
+	var buf syncBuf
+	d.log = slog.New(slog.NewJSONHandler(&buf, nil))
+	if r, serr := d.start(context.Background()); serr == nil {
+		_ = r.stop()
+	}
+	if !strings.Contains(buf.String(), `"level":"WARN"`) || !strings.Contains(buf.String(), "signer-hardening") {
+		t.Fatalf("no startup WARN: %s", buf.String())
+	}
+}
+
+func TestFileSignerErrorNamesRealConfigKey(t *testing.T) {
+	f := newFixture(t, fixOpt{})
+	f.cfg.Okta.Signer.KeyID = filepath.Join(f.dir, "missing.pem")
+	_, err := NewSigner(f.cfg, f.env)
+	if err == nil || !strings.Contains(err.Error(), "okta.signer.key_id") || strings.Contains(err.Error(), "okta.signer.path") {
+		t.Fatalf("got %v", err)
+	}
 }

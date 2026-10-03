@@ -938,3 +938,35 @@ func TestMinTTLSyncRefreshFailureAnswersDegradedNotShortCredential(t *testing.T)
 		t.Fatalf("err %v", err)
 	}
 }
+
+// FR-R02: two access_denied rejections on one provider (classified ErrProvider by
+// internal/okta) leave the other providers valid; two invalid_client still
+// revoke everything inside the window.
+func TestPolicyDenialOnOneProviderLeavesOthersValid(t *testing.T) {
+	r := newRig(t, nil)
+	r.register(Options{})
+	other := &domaintest.FakeProvider{ProviderName: "snow"}
+	if err := r.c.Register(other, domain.Key{Provider: "snow"}, Options{}); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	if _, err := r.c.Credential(ctx, "snow"); err != nil {
+		t.Fatal(err)
+	}
+	denied := domain.Wrap(domain.ErrProvider, errors.New("okta token request failed: access_denied (http 403)"))
+	r.next(fail(denied), fail(denied))
+	_, _ = r.c.Credential(ctx, "aws")
+	r.clk.Advance(time.Second)
+	r.c.Poll(ctx)
+	select {
+	case <-r.c.Revoked():
+		t.Fatal("daemon revoked by a single provider's policy denial")
+	default:
+	}
+	if e, _ := r.c.Entry("snow"); e.State == domain.StateRevoked {
+		t.Fatalf("snow %s", e.State)
+	}
+	if _, err := r.c.Credential(ctx, "snow"); err != nil {
+		t.Fatal(err)
+	}
+}

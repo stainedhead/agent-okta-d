@@ -12,7 +12,8 @@ var (
 	// ErrTransient marks network errors, timeouts, 429 and 5xx. Retry with backoff.
 	ErrTransient = errors.New("transient error")
 	// ErrAuthDefinitive marks a definitive Okta rejection (invalid_client,
-	// unauthorized_client, invalid_grant, access_denied, client inactive).
+	// unauthorized_client, client inactive). access_denied and invalid_grant are
+	// per-provider policy denials and are ErrProvider (FR-R02).
 	ErrAuthDefinitive = errors.New("definitive authentication error")
 	// ErrConfig marks invalid or missing configuration. Exit code 78.
 	ErrConfig = errors.New("configuration error")

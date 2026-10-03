@@ -42,7 +42,7 @@ Provider names used in the API and CLI: `aws`, `github`, `servicenow`, `msgraph`
 
 ## Lifecycle, signals and the kill switch
 
-`SIGTERM`/`SIGINT` stop gracefully (sinks removed, exit 0). `SIGUSR1` starts the revoke sequence. `SIGHUP` is logged and ignored (hot reload is deferred). The revoke sequence: state `revoked` (API answers 403), credential files removed, provider revoke hooks run (best effort; the Okta revoke call **[UNVERIFIED A-04]**), in-memory secrets forgotten, a critical audit event, exit 77. `agent-okta-d revoke` signals the daemon via the pidfile next to the socket and wipes the sinks itself, so it works when the daemon is down. The daemon exits 77 on a definitive Okta rejection (app disabled or key removed) so supervisors do not restart-loop. Disabling the Okta app and the agent's user is still a manual operator step. SCIM and Entra propagation delays **[UNVERIFIED A-08]**.
+`SIGTERM`/`SIGINT` stop gracefully (sinks removed, exit 0). `SIGUSR1` starts the revoke sequence. `SIGHUP` is logged and ignored (hot reload is deferred). The revoke sequence: state `revoked` (API answers 403), credential files removed, provider revoke hooks run (best effort; the Okta revoke call **[UNVERIFIED A-04]**), in-memory secrets forgotten, a critical audit event, exit 77. `agent-okta-d revoke` signals the daemon via the pidfile next to the socket (written mode 0640 and replaced at start) and wipes the sinks itself, so it works when the daemon is down. Before signaling it connects to the daemon socket and compares the peer pid with the pidfile; if they differ (a stale pidfile after a crash and PID reuse) it sends no signal, wipes the sinks and exits 1 asking the operator to check manually. The daemon exits 77 when Okta rejects the client itself (`invalid_client` or `unauthorized_client`, confirmed twice within 30 s: app disabled or key removed) so supervisors do not restart-loop. `access_denied` and `invalid_grant` can be a policy or scope denial for one authorization server, so they only back off and degrade that provider **[UNVERIFIED A-20]**. Disabling the Okta app and the agent's user is still a manual operator step. SCIM and Entra propagation delays **[UNVERIFIED A-08]**.
 
 ## Delivery state and deferred items
 
@@ -52,10 +52,10 @@ Deferred, with rationale:
 
 | Item | Rationale |
 |---|---|
-| M0 spikes (A-01 to A-12) | Need real tenants and hardware; replaced by `m0-spike-checklist.md`, to be run by humans |
+| M0 spikes (A-01 to A-12 and A-20) | Need real tenants and hardware; replaced by `m0-spike-checklist.md`, to be run by humans |
 | M6 Okta roadmap evaluation | Research task about vendor roadmap, not code; out of scope for this build |
 | Entra Agent User spike | Requires a real Entra tenant; out of scope |
-| AWS SDK adapters (KMS, Secrets Manager, STS) | No SDK dependency was added (offline, fakes-only build); blocks `kms` signer, `aws-secretsmanager` store, `atlassian` provider and the AWS doctor probe. Follow-up task |
+| AWS SDK adapters (KMS, Secrets Manager, STS), FR-R01 | No SDK dependency was added (offline, fakes-only build); blocks `kms` signer, `aws-secretsmanager` store, `atlassian` provider and the AWS doctor probe. Follow-up task |
 | Keychain / Secure Enclave and TPM 2.0 hardware backends, native Keychain store | Need hardware, cgo/vendor tooling and a macOS runner **[UNVERIFIED A-12]**; stubs fail closed with exit 78 |
 | P1/P2 items: FR-12 metrics, FR-13 hot reload, FR-14 memory hygiene, GH-10/11/12, MG-7/8, AT-2c, AWS-6, SN-5 | Not trivial; not implemented |
 | ES256 | Implemented and flagged; Okta acceptance unconfirmed **[UNVERIFIED A-01]**, RS256 is the default |

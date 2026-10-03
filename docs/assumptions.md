@@ -16,3 +16,4 @@ Every item the PRD marks unconfirmed stays an explicit assumption. Code that dep
 | A-10 | KMS returns DER ECDSA that converts to JOSE raw R and S (FR-2) | Conversion implemented and unit tested with known vectors | A-10 |
 | A-11 | WSL2 can run the service definition (systemd) (PRD 17.7) | Documented as unconfirmed | A-11 |
 | A-12 | Apple Developer ID/notarization available; Keychain needs cgo (REL-1a) | Keychain code behind build tag; darwin build on a mac runner | A-12 |
+| A-20 | Okta reports a per-provider authorization-server policy or scope denial of a client_credentials grant as `access_denied` or `invalid_grant` (FR-R02); unconfirmed against a real tenant | Only `invalid_client` and `unauthorized_client` are definitive (two within 30 s revoke everything); `access_denied` and `invalid_grant` are provider errors that back off and degrade that one provider | A-20 |

@@ -22,7 +22,7 @@ openssl genrsa -out /etc/agent-okta-d/agent.key 2048
 chmod 0400 /etc/agent-okta-d/agent.key     # owned by the daemon user; no group/other bits
 ```
 
-The file signer rejects a key file with any group or other permission bits. It is meant for development; hardware-backed signers are not available in this build.
+The file signer rejects a key file with any group or other permission bits. It is meant for development: `run` logs a WARN and `doctor` shows `signer-hardening: warn` while it is in use, because the key sits on disk readable by the daemon user. Hardware-backed signers are not available in this build.
 
 ## 4. Write a minimal config
 

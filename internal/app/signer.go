@@ -18,7 +18,7 @@ func NewSigner(cfg *config.Config, env Env) (domain.Signer, error) {
 	s := cfg.Okta.Signer
 	switch s.Type {
 	case "file":
-		fs, err := filesigner.New(filesigner.Config{Path: s.KeyID, KID: s.KID})
+		fs, err := filesigner.New(filesigner.Config{Path: s.KeyID, KID: s.KID, PathField: "okta.signer.key_id"})
 		if err != nil {
 			return nil, err
 		}

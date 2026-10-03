@@ -8,7 +8,7 @@
 | 1 | failure (transient, provider, policy, degraded, not valid) | read the message; retry if `degraded` |
 | 2 | usage error | check flags and arguments |
 | 3 | daemon unreachable (client commands) | start the daemon; check the socket path and that your user is in a group listed in `ipc.allow_gids` |
-| 77 | revoked | the daemon was revoked or Okta rejected the app/key. Do not restart-loop. Fix the cause in Okta, then start again |
+| 77 | revoked | the daemon was revoked or Okta rejected the client (`invalid_client`, `unauthorized_client`: app disabled or key removed). Do not restart-loop. Fix the cause in Okta, then start again |
 | 78 | configuration error | the message names the field; fix the config |
 
 ## Common messages

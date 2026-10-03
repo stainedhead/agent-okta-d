@@ -221,6 +221,7 @@ func TestRevokeCommand(t *testing.T) {
 		if err := os.WriteFile(pidf, []byte("4321\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
+		f.env.DaemonPID = func(string) (int, error) { return 4321, nil }
 		alive, sleeps := true, 0
 		var sent os.Signal
 		f.env.Alive = func(int) bool { return alive }
@@ -240,6 +241,33 @@ func TestRevokeCommand(t *testing.T) {
 		if c := f.main("revoke"); c != 0 || sent != syscall.SIGUSR1 || sleeps != 3 {
 			t.Fatalf("%d sent=%v sleeps=%d %s", c, sent, sleeps, f.stderr.String())
 		}
+	})
+	t.Run("pidfile naming a live unrelated process is never signaled (FR-R03)", func(t *testing.T) {
+		if err := os.WriteFile(pidf, []byte("4321\n"), 0o640); err != nil {
+			t.Fatal(err)
+		}
+		for name, dp := range map[string]func(string) (int, error){
+			"no daemon on the socket": func(string) (int, error) { return 0, errors.New("connect: refused") },
+			"different daemon pid":    func(string) (int, error) { return 9999, nil },
+			"unset seam":              nil,
+		} {
+			f.env.DaemonPID = dp
+			f.env.Alive = func(int) bool { return true }
+			signaled := false
+			f.env.Signal = func(int, os.Signal) error { signaled = true; return nil }
+			write()
+			err := Revoke(context.Background(), f.cfg, f.env, time.Second)
+			if err == nil || !strings.Contains(err.Error(), "not signaling") {
+				t.Fatalf("%s: want refusal, got %v", name, err)
+			}
+			if signaled {
+				t.Fatalf("%s: signal sent to an unverified process", name)
+			}
+			if _, err := os.Stat(tf); !os.IsNotExist(err) {
+				t.Fatalf("%s: sinks must still be wiped", name)
+			}
+		}
+		f.env.DaemonPID = func(string) (int, error) { return 4321, nil }
 	})
 	t.Run("daemon that will not die is an error but files are wiped", func(t *testing.T) {
 		write()
@@ -370,5 +398,39 @@ func TestDepsAndBackend(t *testing.T) {
 	st := b.Status(context.Background())
 	if st.State != domain.StateValid || len(st.Providers) != 1 || st.Providers[0].ExpiresAt == nil {
 		t.Fatalf("%+v", st)
+	}
+}
+
+// FR-R03: the pidfile is private and a stale one is replaced at start.
+func TestPidFileModeAndStaleReplaced(t *testing.T) {
+	f := newFixture(t, fixOpt{})
+	pidf := PidFile(f.cfg)
+	if err := os.WriteFile(pidf, []byte("1\n"), 0o666); err != nil { //nolint:gosec // simulates a stale loose file
+		t.Fatal(err)
+	}
+	_ = os.Chmod(pidf, 0o666) //nolint:gosec // simulates a stale loose file
+	if err := writePidFile(pidf, 4242); err != nil {
+		t.Fatal(err)
+	}
+	st, err := os.Stat(pidf)
+	if err != nil || st.Mode().Perm() != 0o640 {
+		t.Fatalf("%v %v", st, err)
+	}
+	if pid, err := readPid(pidf); err != nil || pid != 4242 {
+		t.Fatalf("%d %v", pid, err)
+	}
+}
+
+func TestDialDaemonPID(t *testing.T) {
+	f := newFixture(t, fixOpt{})
+	read := dialDaemonPID(f.env.PeerCred)
+	if _, err := read(filepath.Join(f.dir, "nothing.sock")); err == nil {
+		t.Fatal("dial of a missing socket must fail")
+	}
+	d, _, cancel, done := f.start(t)
+	defer func() { cancel(); <-done }()
+	_ = d
+	if pid, err := read(f.cfg.IPC.Socket); err != nil || pid != os.Getpid() {
+		t.Fatalf("%d %v", pid, err)
 	}
 }

@@ -40,6 +40,10 @@ const maxKeyFileSize = 64 << 10
 type Config struct {
 	Path string // PEM file holding a PKCS#8, PKCS#1 RSA or SEC1 EC (P-256) key
 	KID  string // key id registered in Okta
+	// PathField names the config key that holds Path in error messages; the
+	// default is "okta.signer.path". Callers whose Path comes from another key
+	// (the daemon passes okta.signer.key_id) set it so errors name a real key.
+	PathField string
 }
 
 // Signer signs with an in-memory copy of the key loaded from a file.
@@ -57,34 +61,37 @@ var _ domain.Signer = (*Signer)(nil)
 // domain.ErrPolicy; missing, unparsable or unsupported keys are domain.ErrConfig.
 // Errors never contain key bytes.
 func New(c Config) (*Signer, error) {
+	if c.PathField == "" {
+		c.PathField = "okta.signer.path"
+	}
 	if c.Path == "" {
-		return nil, domain.NewConfigError("okta.signer.path", "key file path is required")
+		return nil, domain.NewConfigError(c.PathField, "key file path is required")
 	}
 	if c.KID == "" {
 		return nil, domain.NewConfigError("okta.signer.kid", "key id is required")
 	}
 	f, err := os.Open(c.Path)
 	if err != nil {
-		return nil, domain.NewConfigError("okta.signer.path", "cannot open key file: "+errKind(err))
+		return nil, domain.NewConfigError(c.PathField, "cannot open key file: "+errKind(err))
 	}
 	defer func() { _ = f.Close() }()
 	// Stat the opened descriptor so the permission check and the read refer
 	// to the same file (no check/use race).
 	st, err := f.Stat()
 	if err != nil {
-		return nil, domain.NewConfigError("okta.signer.path", "cannot stat key file")
+		return nil, domain.NewConfigError(c.PathField, "cannot stat key file")
 	}
 	if !st.Mode().IsRegular() {
-		return nil, domain.NewConfigError("okta.signer.path", "key file is not a regular file")
+		return nil, domain.NewConfigError(c.PathField, "key file is not a regular file")
 	}
 	if st.Mode().Perm()&0o077 != 0 {
 		return nil, domain.Wrap(domain.ErrPolicy, fmt.Errorf("key file %s must not be accessible by group or others (mode %04o)", c.Path, st.Mode().Perm()))
 	}
 	raw, err := io.ReadAll(io.LimitReader(f, maxKeyFileSize))
 	if err != nil {
-		return nil, domain.NewConfigError("okta.signer.path", "cannot read key file")
+		return nil, domain.NewConfigError(c.PathField, "cannot read key file")
 	}
-	key, err := parseKey(raw)
+	key, err := parseKey(raw, c.PathField)
 	if err != nil {
 		return nil, err
 	}
@@ -92,21 +99,21 @@ func New(c Config) (*Signer, error) {
 	switch k := key.(type) {
 	case *rsa.PrivateKey:
 		if k.N.BitLen() < minRSABits {
-			return nil, domain.NewConfigError("okta.signer.path", "RSA key must be at least 2048 bits")
+			return nil, domain.NewConfigError(c.PathField, "RSA key must be at least 2048 bits")
 		}
 		s.key, s.alg = k, AlgRS256
 		s.jwk, err = rsaJWK(&k.PublicKey, c.KID)
 	case *ecdsa.PrivateKey:
 		if k.Curve != elliptic.P256() {
-			return nil, domain.NewConfigError("okta.signer.path", "EC key must be P-256")
+			return nil, domain.NewConfigError(c.PathField, "EC key must be P-256")
 		}
 		s.key, s.alg = k, AlgES256
 		s.jwk, err = ecJWK(&k.PublicKey, c.KID)
 	default:
-		return nil, domain.NewConfigError("okta.signer.path", "unsupported key type")
+		return nil, domain.NewConfigError(c.PathField, "unsupported key type")
 	}
 	if err != nil {
-		return nil, domain.NewConfigError("okta.signer.path", "cannot encode public key")
+		return nil, domain.NewConfigError(c.PathField, "cannot encode public key")
 	}
 	return s, nil
 }
@@ -123,10 +130,10 @@ func errKind(err error) string {
 	}
 }
 
-func parseKey(raw []byte) (crypto.PrivateKey, error) {
+func parseKey(raw []byte, field string) (crypto.PrivateKey, error) {
 	block, _ := pem.Decode(raw)
 	if block == nil {
-		return nil, domain.NewConfigError("okta.signer.path", "key file is not PEM encoded")
+		return nil, domain.NewConfigError(field, "key file is not PEM encoded")
 	}
 	if k, err := x509.ParsePKCS8PrivateKey(block.Bytes); err == nil {
 		return k, nil
@@ -137,7 +144,7 @@ func parseKey(raw []byte) (crypto.PrivateKey, error) {
 	if k, err := x509.ParseECPrivateKey(block.Bytes); err == nil {
 		return k, nil
 	}
-	return nil, domain.NewConfigError("okta.signer.path", "cannot parse private key")
+	return nil, domain.NewConfigError(field, "cannot parse private key")
 }
 
 // Alg is the JWS algorithm this key signs with (RS256 or ES256).

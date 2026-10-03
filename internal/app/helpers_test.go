@@ -323,6 +323,7 @@ log: {destination: stderr}
 		Stdin: strings.NewReader(""), Stdout: f.stdout, Stderr: f.stderr,
 		Signal: func(int, os.Signal) error { return nil }, Sleep: func(time.Duration) {},
 		Alive: func(int) bool { return false }, Exec: f.exec.run,
+		DaemonPID:  dialDaemonPID(ipc.NewPeerCred()),
 		Executable: func() (string, error) { return "/usr/local/bin/agent-okta-d", nil },
 		Getenv:     func(k string) string { return f.envvar[k] },
 	}

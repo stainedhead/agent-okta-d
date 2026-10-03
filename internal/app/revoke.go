@@ -38,13 +38,18 @@ func cmdRevoke(args []string, env Env) error {
 // already down or wedged.
 func Revoke(ctx context.Context, cfg *config.Config, env Env, timeout time.Duration) error {
 	out := env.Stdout
-	var waitErr error
+	var waitErr, notDaemon error
 	pid, perr := readPid(PidFile(cfg))
 	switch {
 	case perr != nil && !errors.Is(perr, os.ErrNotExist):
 		return fmt.Errorf("revoke: %w", perr)
 	case perr != nil || !env.Alive(pid):
 		_, _ = fmt.Fprintln(out, "no running daemon found; wiping credential files")
+	case !daemonVerified(cfg, env, pid):
+		// FR-R03: a stale pidfile plus PID reuse must never make revoke signal
+		// an unrelated process. The sinks are still wiped below.
+		notDaemon = fmt.Errorf("revoke: pidfile names live pid %d but the daemon socket does not confirm it; not signaling (check for a running agent-okta-d manually)", pid)
+		_, _ = fmt.Fprintf(out, "pid %d is not the daemon; wiping credential files\n", pid)
 	default:
 		if err := env.Signal(pid, syscall.SIGUSR1); err != nil {
 			return fmt.Errorf("revoke: signal daemon: %w", err)
@@ -68,6 +73,9 @@ func Revoke(ctx context.Context, cfg *config.Config, env Env, timeout time.Durat
 		return fmt.Errorf("revoke: remove credential files: %w", err)
 	}
 	_, _ = fmt.Fprintf(out, "removed %d credential file(s)\n", len(specs))
+	if notDaemon != nil {
+		return notDaemon
+	}
 	if waitErr != nil {
 		return waitErr
 	}
@@ -85,4 +93,30 @@ func readPid(path string) (int, error) {
 		return 0, errors.New("pidfile is malformed")
 	}
 	return n, nil
+}
+
+// daemonVerified reports whether pid is the process listening on the daemon
+// socket.
+func daemonVerified(cfg *config.Config, env Env, pid int) bool {
+	if env.DaemonPID == nil {
+		return false
+	}
+	got, err := env.DaemonPID(cfg.IPC.Socket)
+	return err == nil && got == pid
+}
+
+// writePidFile replaces any stale pidfile with a fresh 0640 one.
+func writePidFile(path string, pid int) error {
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o640) //nolint:gosec // group-readable so the operator's revoke can read it
+	if err != nil {
+		return err
+	}
+	if _, err := f.WriteString(strconv.Itoa(pid) + "\n"); err != nil {
+		_ = f.Close()
+		return err
+	}
+	return f.Close()
 }

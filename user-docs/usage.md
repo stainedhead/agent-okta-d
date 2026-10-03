@@ -92,7 +92,7 @@ Cannot start in this build (requires the `aws-secretsmanager` source, which has 
 agent-okta-d revoke --config CFG [--timeout 15s]
 ```
 
-Signals the running daemon (via the pidfile next to the socket), waits for it to exit 77, and removes the credential files itself, so it also works with the daemon down. It does NOT disable anything in Okta or the identity provider: afterwards disable the agent's Okta app, then the agent's user. Already issued credentials stay valid until they expire; Okta revocation of issued tokens is best effort and **UNVERIFIED** (A-04), and SCIM/Entra propagation delays are unmeasured (A-08).
+Signals the running daemon (via the pidfile next to the socket, after confirming over the daemon socket that the pid really is the daemon; otherwise it sends nothing, wipes the files and exits 1), waits for it to exit 77, and removes the credential files itself, so it also works with the daemon down. It does NOT disable anything in Okta or the identity provider: afterwards disable the agent's Okta app, then the agent's user. Already issued credentials stay valid until they expire; Okta revocation of issued tokens is best effort and **UNVERIFIED** (A-04), and SCIM/Entra propagation delays are unmeasured (A-08).
 
 ## enroll okta
 

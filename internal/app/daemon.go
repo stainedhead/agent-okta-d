@@ -273,7 +273,7 @@ func (d *Daemon) listen(ctx context.Context) (*running, error) {
 		}
 	}
 	pid := PidFile(d.cfg)
-	if err := os.WriteFile(pid, []byte(strconv.Itoa(d.env.Host.PID())+"\n"), 0o644); err != nil { //nolint:gosec // pid is not secret
+	if err := writePidFile(pid, d.env.Host.PID()); err != nil {
 		_ = ln.Close()
 		return nil, fmt.Errorf("write pidfile: %w", err)
 	}

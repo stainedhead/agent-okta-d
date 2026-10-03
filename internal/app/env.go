@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -76,6 +77,10 @@ type Env struct {
 	Sleep  func(d time.Duration)
 	// Alive reports whether pid is a running process.
 	Alive func(pid int) bool
+	// DaemonPID returns the pid of the process listening on socket, read from
+	// the socket peer credentials, so revoke can prove the pidfile names the
+	// daemon before signaling (FR-R03). An error means "not verified".
+	DaemonPID func(socket string) (int, error)
 	// Exec runs an external command (configure git --apply).
 	Exec func(ctx context.Context, argv []string) error
 	// Executable is the absolute path of this binary (configure git, gh).
@@ -106,13 +111,31 @@ func DefaultEnv() Env {
 			}
 			return p.Signal(sig)
 		},
-		Sleep: time.Sleep,
-		Alive: func(pid int) bool { return syscall.Kill(pid, 0) == nil },
-		Exec:  execCommand,
+		Sleep:     time.Sleep,
+		Alive:     func(pid int) bool { return syscall.Kill(pid, 0) == nil },
+		DaemonPID: dialDaemonPID(ipc.NewPeerCred()),
+		Exec:      execCommand,
 		Executable: func() (string, error) {
 			return os.Executable()
 		},
 		Getenv: os.Getenv,
+	}
+}
+
+// dialDaemonPID connects to the daemon socket and reads the peer pid, which is
+// the listening process.
+func dialDaemonPID(pc domain.PeerCredReader) func(string) (int, error) {
+	return func(socket string) (int, error) {
+		conn, err := net.DialTimeout("unix", socket, 2*time.Second)
+		if err != nil {
+			return 0, err
+		}
+		defer func() { _ = conn.Close() }()
+		ci, err := pc.Read(conn)
+		if err != nil {
+			return 0, err
+		}
+		return ci.PID, nil
 	}
 }
 

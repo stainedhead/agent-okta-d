@@ -140,8 +140,7 @@ type tokenResponse struct {
 // client assertion). Failures map onto the domain taxonomy:
 //   - network error, timeout, 429, 5xx: ErrTransient (RetryAfter set from the
 //     X-Rate-Limit-Reset or Retry-After header on 429)
-//   - invalid_client, unauthorized_client, invalid_grant, access_denied:
-//     ErrAuthDefinitive (the cache confirms twice before revoking, FR-6)
+//   - invalid_client, unauthorized_client: ErrAuthDefinitive (the cache confirms twice before revoking, FR-6)
 //   - any other rejection or malformed response: ErrProvider
 func (c *Client) Token(ctx context.Context, req domain.OktaTokenRequest) (domain.OktaToken, error) {
 	tokenURL, err := c.TokenURL(req.AuthServer)
@@ -257,13 +256,13 @@ func (c *Client) retryHint(h http.Header) time.Duration {
 }
 
 // definitive lists the Okta rejections that FR-6 treats as "the agent was
-// switched off" (after confirmation by the caller). An inactive client is
-// reported by Okta as invalid_client.
+// switched off" (after confirmation by the caller). Only codes that identify the
+// client qualify; an inactive client is reported by Okta as invalid_client.
+// access_denied and invalid_grant can be a per-provider authorization-server
+// policy or scope denial, so they stay ErrProvider (FR-R02, assumption A-20).
 var definitive = map[string]bool{
 	"invalid_client":      true,
 	"unauthorized_client": true,
-	"invalid_grant":       true,
-	"access_denied":       true,
 }
 
 func classifyRejection(status int, code string) error {

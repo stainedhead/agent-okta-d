@@ -85,3 +85,18 @@ jobs:
           # runner with cgo left on, because Keychain-backed code may need it.
           CGO_ENABLED: ${{ matrix.goos == 'linux' && '0' || '1' }}
         run: go build ./...
+
+  # FR-R10: darwin-tagged code (peer credentials, Keychain stubs, sinks) is
+  # executed, not only cross-compiled.
+  test-macos:
+    name: test (macos)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Download modules
+        run: go mod download
+      - name: go test (platform-tagged packages and the binary)
+        run: go test -race ./internal/ipc/... ./internal/signer/... ./internal/store/... ./internal/app/... ./cmd/...
