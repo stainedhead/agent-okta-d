@@ -66,7 +66,7 @@ func New(cfg Config) (*Provider, error) {
 	switch {
 	case cfg.InstanceURL == "" || err != nil || u.Hostname() == "":
 		return nil, domain.NewConfigError("providers.servicenow.instance_url", "must be an absolute URL")
-	case u.Scheme != "https" && !(u.Scheme == "http" && isLoopback(u.Hostname())):
+	case u.Scheme != "https" && (u.Scheme != "http" || !isLoopback(u.Hostname())):
 		return nil, domain.NewConfigError("providers.servicenow.instance_url", "must use https")
 	case cfg.AuthServer == "":
 		return nil, domain.NewConfigError("providers.servicenow.authorization_server", "is required")
