@@ -210,3 +210,27 @@ func TestRuntimeDir(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+func TestOptionalIntegrationFields(t *testing.T) {
+	c, err := Parse([]byte(minimal + `
+providers:
+  github: {mode: pat, login: l, probe_repo: o/r, store: {type: file-encrypted, secret_id: s, path: /var/lib/x/s.enc}}
+  msgraph: {tenant_id: t, app_client_id: c, upn: u@x, scopes: [offline_access], probe_other_user: o@x, store: {type: keychain, secret_id: s}}
+  atlassian: {source: aws-secretsmanager, secret_id: s, sink: {file: /run/a}, interval_seconds: 60}
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Providers.GitHub.ProbeRepo != "o/r" || c.Providers.GitHub.Store.Path != "/var/lib/x/s.enc" ||
+		c.Providers.MSGraph.ProbeOtherUser != "o@x" || c.Providers.Atlassian.IntervalSeconds != 60 {
+		t.Fatalf("unexpected parse: %+v", c.Providers)
+	}
+	c, err = Parse([]byte(strings.Replace(minimal, "ipc:", `  authorization_servers: {agents-aws: {id: aus1, audience: sts.amazonaws.com}}
+ipc:`, 1)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Okta.AuthorizationServers["agents-aws"].ID != "aus1" {
+		t.Fatalf("auth servers: %+v", c.Okta.AuthorizationServers)
+	}
+}

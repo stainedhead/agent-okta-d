@@ -40,6 +40,17 @@ type Okta struct {
 	OrgURL   string `yaml:"org_url"`
 	ClientID string `yaml:"client_id"`
 	Signer   Signer `yaml:"signer"`
+	// AuthorizationServers optionally maps the authorization server names used
+	// by providers to their Okta id and audience. A name without an entry is
+	// used as its own id (INT: added by the app wiring, the PRD sample uses the
+	// name as the id).
+	AuthorizationServers map[string]AuthServer `yaml:"authorization_servers"`
+}
+
+// AuthServer is one Okta custom authorization server.
+type AuthServer struct {
+	ID       string `yaml:"id"`
+	Audience string `yaml:"audience"`
 }
 
 // Signer selects the key holder. For type "file" KeyID is the private key path.
@@ -74,6 +85,9 @@ type AWS struct {
 type Store struct {
 	Type     string `yaml:"type"`
 	SecretID string `yaml:"secret_id"`
+	// Path locates the file of a file-encrypted store (default: the daemon
+	// state directory).
+	Path string `yaml:"path"`
 }
 
 // GitIdentity is the git user for configure git.
@@ -91,6 +105,7 @@ type GitHub struct {
 	Store             Store       `yaml:"store"`
 	ExpiryWarningDays int         `yaml:"expiry_warning_days"`
 	GitIdentity       GitIdentity `yaml:"git_identity"`
+	ProbeRepo         string      `yaml:"probe_repo"` // optional owner/name for the doctor read check (GH-7)
 }
 
 // ServiceNow is the ServiceNow provider section.
@@ -109,6 +124,8 @@ type MSGraph struct {
 	Scopes            []string `yaml:"scopes"`
 	Store             Store    `yaml:"store"`
 	ReauthWarningDays int      `yaml:"reauth_warning_days"`
+	// ProbeOtherUser is a mailbox the agent must not reach; doctor expects 403 (MG-6).
+	ProbeOtherUser string `yaml:"probe_other_user"`
 }
 
 // Sink is a file sink.
@@ -123,6 +140,8 @@ type Atlassian struct {
 	Source   string `yaml:"source"`
 	SecretID string `yaml:"secret_id"`
 	Sink     Sink   `yaml:"sink"`
+	// IntervalSeconds is the re-fetch interval (default 900).
+	IntervalSeconds int `yaml:"interval_seconds"`
 }
 
 // Refresh tunes the scheduler.
