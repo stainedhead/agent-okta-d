@@ -55,3 +55,7 @@ go test ./...
 ## user-docs/ rule
 
 `user-docs/` holds only files that help a user adopt, configure and use the tool: install, getting started, configuration reference, usage examples and troubleshooting. It is NOT for design, requirements, spec or process material, and it must not link into `specs/`. Put that material in `docs/` or `specs/` instead.
+
+## Agent skill
+
+How agents use this tool is documented in the root repository's skill document, `skills/agent-okta-d.md`, in https://github.com/stainedhead/agentic-teams (see `skills/README.md`). That is its only home; do not copy it here. A change to agent-visible daemon behavior (failure modes, exit codes, the revoked state, any agent-runnable command) or to the credential forms stock tools receive is not finished until that skill is updated (see SKILL-1..7 in the PRD).
