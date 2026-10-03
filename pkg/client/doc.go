@@ -16,4 +16,12 @@
 // ErrUnauthorized, not_configured (404) to ErrNotConfigured, degraded (503,
 // Retry-After) to ErrDegraded, connection failure to ErrDaemonUnavailable.
 // Code is decided by the body "error" field first, status second.
+//
+// Usage:
+//
+//	c := client.New()                       // socket: AGENT_OKTA_D_SOCKET, else platform default
+//	cred, err := c.Credential(ctx, "aws")   // cred.AccessToken prints redacted; use Reveal()
+//	if errors.Is(err, client.ErrDegraded) { d, _ := client.RetryAfter(err); ... }
+//
+// Test code can run against clienttest, an in-process fake daemon.
 package client
