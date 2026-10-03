@@ -436,7 +436,9 @@ func TestDialDaemonPID(t *testing.T) {
 	_ = d
 	if pid, err := read(f.cfg.IPC.Socket); err != nil || pid != os.Getpid() {
 		t.Fatalf("%d %v", pid, err)
-=======
+	}
+}
+
 // FR-R06: a rotated opaque (non-JWT) msgraph refresh token that a foreign
 // library embeds in an error must not reach the log output.
 func TestRotatedRefreshTokenNeverLogged(t *testing.T) {
@@ -476,6 +478,5 @@ func TestRotatedRefreshTokenNeverLogged(t *testing.T) {
 	}
 	if strings.Contains(d.scrub.Scrub(last), last) {
 		t.Fatal("last token must be scrubbed")
->>>>>>> ws/fix2
 	}
 }
