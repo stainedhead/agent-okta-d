@@ -2,7 +2,7 @@
 
 A credential daemon that gives autonomous SDLC agents short-lived, per-agent access to AWS, GitHub, ServiceNow, Atlassian and Microsoft 365 (Outlook, Teams), rooted in Okta OIDC where the target system accepts it.
 
-**Status: Draft PRD (v0.2). No implementation yet.** The requirements are in [`agent-okta-d-PRD.md`](agent-okta-d-PRD.md). For why this exists and how it fits the wider agentic-teams project, see [`INTENT.md`](INTENT.md).
+**Status: implemented and tested against fakes only; never run against a real tenant.** The requirements are in [`specs/261003-agent-okta-d/agent-okta-d-PRD.md`](specs/261003-agent-okta-d/agent-okta-d-PRD.md). For why this exists and how it fits the wider agentic-teams project, see [`INTENT.md`](INTENT.md).
 
 ## What it is
 
@@ -27,7 +27,7 @@ Agents are LLM-driven processes with a shell. They should never handle OIDC, rea
 - Credentials refresh proactively, fail closed, and are logged and audited with a redaction layer so no secret is logged.
 - The kill switch has two parts: disable the agent's Okta application and disable the agent's user account. Credentials already issued live until their own expiry, so exposure windows are documented per system (PRD section 13).
 - Authorization is never decided by the daemon; it stays server side (IAM, GitHub rulesets, ServiceNow roles/ACLs, Atlassian permissions, Exchange/Teams policy).
-- Planned in Go (static binary, macOS and Linux; native Windows is not a target; Windows machines use WSL2 with the Linux build).
+- Written in Go (static binary, macOS and Linux; native Windows is not a target; Windows machines use WSL2 with the Linux build).
 
 ## Evidence caveats
 
@@ -43,27 +43,50 @@ This repository is one of a set of related projects:
 - [`teams-cli`](https://github.com/stainedhead/teams-cli): agent-safe Microsoft Teams access.
 - [`agentic-team-w-paperclip`](https://github.com/stainedhead/agentic-team-w-paperclip): part of the set rooted at [`agentic-teams`](https://github.com/stainedhead/agentic-teams).
 
-The `snow`, `outlook` and `teams` CLIs obtain their credentials from this daemon through [`agent-cli-core`](https://github.com/stainedhead/agent-cli-core), whose `auth` package is the consumer of the Go client library planned in `pkg/client`.
+The `snow`, `outlook` and `teams` CLIs obtain their credentials from this daemon through [`agent-cli-core`](https://github.com/stainedhead/agent-cli-core), whose `auth` package is the consumer of the Go client library in `pkg/client`.
 
-## Planned layout
+## What is built, and what is not
+
+Built and fake-tested: the daemon (`run`), unix-socket API with peer-credential auth, cache and refresh scheduler, file sinks, redacting logs and audit, the `aws`, `github`, `servicenow`, `msgraph` and `atlassian` provider code, the operator CLI (`run`, `token`, `status`, `doctor`, `revoke`, `env`, `credential-helper`, `configure aws|git|gh`, `enroll github|msgraph|okta`, `version`), and the `pkg/client` library with its `clienttest` fake daemon.
+
+Not usable in the shipped binary: the `kms`, `keychain` and `tpm` signers, the `aws-secretsmanager` and `keychain` stores, and therefore the `atlassian` provider and the AWS `doctor` probe (the AWS SDK adapters and hardware backends are deferred; a config needing them exits 78). The only working signer is `file` (development use) and the only working store is `file-encrypted`.
+
+Unverified: all vendor behavior listed in [`docs/assumptions.md`](docs/assumptions.md) (A-01 to A-12). The real-tenant M0 spikes are replaced by [`docs/m0-spike-checklist.md`](docs/m0-spike-checklist.md) and have not been run. Also deferred: M6 Okta roadmap evaluation, the Entra Agent User spike, P1/P2 items (metrics, hot reload, memory hygiene, GH-10/11/12, MG-7/8, AT-2c, AWS-6, SN-5). Release workflows (build, sign, notarize, publish) are not part of this work; only CI exists. Details: [`docs/product-details.md`](docs/product-details.md).
+
+## Layout
 
 ```
-cmd/agent-okta-d/   subcommands, signal handling, exit codes
-internal/           config, signer, okta, provider, store, enroll, cache, ipc, sink, obs
-pkg/client/         Go client library consumed by agent-cli-core's auth package
+cmd/agent-okta-d/   entry point (calls internal/app)
+internal/           app, cache, config, domain, enroll, ipc, obs, okta, provider, signer, sink, store, version
+pkg/client/         Go client library consumed by agent-cli-core's auth package (+ clienttest fake daemon)
 docs/               product and technical documentation
 user-docs/          end-user documentation (install, configure, use, troubleshoot)
 specs/              feature specs (completed specs in specs/archive/)
 ```
 
-None of the code directories exist yet. See PRD section 9 for the full module layout and interfaces.
+## Quick start
+
+```
+make build && ./bin/agent-okta-d --help
+```
+
+Then follow [`user-docs/getting-started.md`](user-docs/getting-started.md).
 
 ## Documentation
 
+User documentation (adopt, configure, use):
+
+- [`user-docs/getting-started.md`](user-docs/getting-started.md)
+- [`user-docs/configuration.md`](user-docs/configuration.md): configuration reference
+- [`user-docs/usage.md`](user-docs/usage.md): examples for every command and provider
+- [`user-docs/client-library.md`](user-docs/client-library.md): using `pkg/client`
+- [`user-docs/troubleshooting.md`](user-docs/troubleshooting.md)
+
+Project documentation:
+
 - [`INTENT.md`](INTENT.md): purpose, wider context, goals and scope.
-- [`agent-okta-d-PRD.md`](agent-okta-d-PRD.md): the product requirements document (source of truth).
-- [`docs/`](docs/): product summary, product details, technical details and architectural decision record.
-- [`user-docs/`](user-docs/): end-user documentation; nothing to read yet.
+- [`specs/261003-agent-okta-d/agent-okta-d-PRD.md`](specs/261003-agent-okta-d/agent-okta-d-PRD.md): the product requirements document (source of truth).
+- [`docs/product-summary.md`](docs/product-summary.md), [`docs/product-details.md`](docs/product-details.md), [`docs/technical-details.md`](docs/technical-details.md) (includes the full `pkg/client` reference), [`docs/architectural-decision-record.md`](docs/architectural-decision-record.md), [`docs/assumptions.md`](docs/assumptions.md), [`docs/m0-spike-checklist.md`](docs/m0-spike-checklist.md).
 - [`AGENTS.md`](AGENTS.md): contributor and agent rules.
 
 ## Contributing
