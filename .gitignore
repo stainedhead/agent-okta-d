@@ -1,0 +1,29 @@
+# Binaries and build output
+/bin/
+/dist/
+*.exe
+*.test
+*.out
+/agent-okta-d
+
+# Coverage
+coverage.*
+*.coverprofile
+
+# Go workspace
+go.work
+go.work.sum
+
+# Secrets and local config
+.env
+.env.*
+*.pem
+*.key
+*.p12
+config.local.yaml
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
