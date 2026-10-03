@@ -1,6 +1,6 @@
 # Technical details
 
-Design and reference for what is built. Requirements: `../specs/261003-agent-okta-d/agent-okta-d-PRD.md`. Unverified vendor behavior is marked **[UNVERIFIED A-xx]** (see `assumptions.md`).
+Design and reference for what is built. Requirements: `../specs/archive/261003-agent-okta-d/agent-okta-d-PRD.md`. Unverified vendor behavior is marked **[UNVERIFIED A-xx]** (see `assumptions.md`).
 
 ## Architecture
 

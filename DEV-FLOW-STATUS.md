@@ -22,7 +22,7 @@ Pre-step: PRD validation (/review-prd) — ✅ Complete (Minor gaps, fixed)
 | 6  | Prepare Review PRD             | ✅ Complete | 2026-10-03T21:17:00Z | 2026-10-03T21:18:19Z | approx |
 | 7  | Archive Original Spec          | ✅ Complete | 2026-10-03T21:18:19Z | 2026-10-03T21:18:19Z | ~0 |
 | 8  | Spec Review Fixes              | ✅ Complete | 2026-10-03T21:18:19Z | 2026-10-03T21:18:19Z | approx |
-| 9  | Implement Review Fixes          | ⬜ Pending | — | — | — |
+| 9  | Implement Review Fixes          | ✅ Complete | see git log | see git log | FR-R01 (warning only), R02-R08, R10 implemented; R09 tracking fixed; R01 production adapters deferred (docs/deferred.md) |
 | 10 | Archive Fixes Spec              | ⬜ Pending | — | — | — |
 | 11 | Final Quality Pass              | ⬜ Pending | — | — | — |
 | 12 | Process Analysis Report         | ⬜ Pending | — | — | — |

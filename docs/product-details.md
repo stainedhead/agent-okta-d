@@ -1,6 +1,6 @@
 # Product details
 
-What the daemon does, as built. Unverified vendor behavior is marked **[UNVERIFIED A-xx]** and refers to [`assumptions.md`](assumptions.md). The original requirements are in `../specs/261003-agent-okta-d/agent-okta-d-PRD.md`.
+What the daemon does, as built. Unverified vendor behavior is marked **[UNVERIFIED A-xx]** and refers to [`assumptions.md`](assumptions.md). The original requirements are in `../specs/archive/261003-agent-okta-d/agent-okta-d-PRD.md`.
 
 ## Goals and non-goals
 

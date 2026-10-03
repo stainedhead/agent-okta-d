@@ -1,8 +1,8 @@
 # Tasks: agent-okta-d
-Date: 2026-10-03 | Status: In Progress (WS-0, A..L, INT merged; Phase 9 open)
+Date: 2026-10-03 | Status: Complete (archived; deferrals tracked in docs/deferred.md)
 
 ## Progress Summary
-28/30 tasks complete (open: P9.1, P9.2)
+30/30 tasks complete
 
 Format: `ID | WS | depends | est | acceptance`. All tasks: failing test first; gates (gofmt, vet, lint, `go test -race`) green.
 
@@ -51,7 +51,7 @@ Format: `ID | WS | depends | est | acceptance`. All tasks: failing test first; g
 - [x] P8.2 | WS-L | P2.3 | 3h | Keychain signer (darwin build tag) and TPM signer (linux build tag) behind interfaces; stubs returning `ErrConfig` on other platforms; compile on all 3 targets.
 
 ## Phase 9 Docs and hardening
-- [ ] P9.1 | WS-INT | all | 3h | `user-docs/` (install, config reference, troubleshooting); `doctor` enforces agent/daemon user separation check.
-- [ ] P9.2 | WS-INT | all | 2h | Final gates on 3 targets, coverage thresholds, assumptions register cross-check (every `ASSUMPTION(` marker listed), deferred P1/P2 list in status.md, note for root-repo skill PR.
+- [x] P9.1 | WS-INT | all | 3h | `user-docs/` (install, config reference, troubleshooting); `doctor` enforces agent/daemon user separation check.
+- [x] P9.2 | WS-INT | all | 2h | Final gates on 3 targets, coverage thresholds, assumptions register cross-check (every `ASSUMPTION(` marker listed), deferred P1/P2 list in status.md, note for root-repo skill PR.
 
 Total: 30 tasks (P2.10 added by WS-INT).

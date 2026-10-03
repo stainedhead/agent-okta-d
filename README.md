@@ -2,7 +2,7 @@
 
 A credential daemon that gives autonomous SDLC agents short-lived, per-agent access to AWS, GitHub, ServiceNow, Atlassian and Microsoft 365 (Outlook, Teams), rooted in Okta OIDC where the target system accepts it.
 
-**Status: implemented and tested against fakes only; never run against a real tenant.** The requirements are in [`specs/261003-agent-okta-d/agent-okta-d-PRD.md`](specs/261003-agent-okta-d/agent-okta-d-PRD.md). For why this exists and how it fits the wider agentic-teams project, see [`INTENT.md`](INTENT.md).
+**Status: implemented and tested against fakes only; never run against a real tenant.** The requirements are in [`specs/archive/261003-agent-okta-d/agent-okta-d-PRD.md`](specs/archive/261003-agent-okta-d/agent-okta-d-PRD.md). For why this exists and how it fits the wider agentic-teams project, see [`INTENT.md`](INTENT.md).
 
 ## What it is
 
@@ -51,7 +51,7 @@ Built and fake-tested: the daemon (`run`), unix-socket API with peer-credential 
 
 Not usable in the shipped binary: the `kms`, `keychain` and `tpm` signers, the `aws-secretsmanager` and `keychain` stores, and therefore the `atlassian` provider and the AWS `doctor` probe (the AWS SDK adapters and hardware backends are deferred; a config needing them exits 78). The only working signer is `file` (development use) and the only working store is `file-encrypted`.
 
-Unverified: all vendor behavior listed in [`docs/assumptions.md`](docs/assumptions.md) (A-01 to A-12 and A-20). The real-tenant M0 spikes are replaced by [`docs/m0-spike-checklist.md`](docs/m0-spike-checklist.md) and have not been run. Also deferred: M6 Okta roadmap evaluation, the Entra Agent User spike, P1/P2 items (metrics, hot reload, memory hygiene, GH-10/11/12, MG-7/8, AT-2c, AWS-6, SN-5). Release workflows (build, sign, notarize, publish) are not part of this work; only CI exists. Details: [`docs/product-details.md`](docs/product-details.md).
+Unverified: all vendor behavior listed in [`docs/assumptions.md`](docs/assumptions.md) (A-01 to A-12 and A-20). The real-tenant M0 spikes are replaced by [`docs/m0-spike-checklist.md`](docs/m0-spike-checklist.md) and have not been run. Also deferred: M6 Okta roadmap evaluation, the Entra Agent User spike, P1/P2 items (metrics, hot reload, memory hygiene, GH-10/11/12, MG-7/8, AT-2c, AWS-6, SN-5). Release workflows (build, sign, notarize, publish) are not part of this work; only CI exists. Deferred items, the unverified list and the pending root skill update: [`docs/deferred.md`](docs/deferred.md). Details: [`docs/product-details.md`](docs/product-details.md).
 
 ## Layout
 
@@ -85,8 +85,8 @@ User documentation (adopt, configure, use):
 Project documentation:
 
 - [`INTENT.md`](INTENT.md): purpose, wider context, goals and scope.
-- [`specs/261003-agent-okta-d/agent-okta-d-PRD.md`](specs/261003-agent-okta-d/agent-okta-d-PRD.md): the product requirements document (source of truth).
-- [`docs/product-summary.md`](docs/product-summary.md), [`docs/product-details.md`](docs/product-details.md), [`docs/technical-details.md`](docs/technical-details.md) (includes the full `pkg/client` reference), [`docs/architectural-decision-record.md`](docs/architectural-decision-record.md), [`docs/assumptions.md`](docs/assumptions.md), [`docs/m0-spike-checklist.md`](docs/m0-spike-checklist.md).
+- [`specs/archive/261003-agent-okta-d/agent-okta-d-PRD.md`](specs/archive/261003-agent-okta-d/agent-okta-d-PRD.md): the product requirements document (source of truth).
+- [`docs/product-summary.md`](docs/product-summary.md), [`docs/product-details.md`](docs/product-details.md), [`docs/technical-details.md`](docs/technical-details.md) (includes the full `pkg/client` reference), [`docs/architectural-decision-record.md`](docs/architectural-decision-record.md), [`docs/assumptions.md`](docs/assumptions.md), [`docs/m0-spike-checklist.md`](docs/m0-spike-checklist.md), [`docs/deferred.md`](docs/deferred.md).
 - [`AGENTS.md`](AGENTS.md): contributor and agent rules.
 
 ## Contributing

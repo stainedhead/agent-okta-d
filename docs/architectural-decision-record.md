@@ -1,6 +1,6 @@
 # Architectural decision record
 
-Record significant architecture decisions here, one entry per decision (context, decision, consequences, status). The decisions already made as inputs to the PRD (D1 to D7: Okta OIDC as identity root, daemon rather than wrapper CLI, stock `aws`/`gh`/`git`, custom CLIs limited to `snow`/`outlook`/`teams`, Atlassian via Rovo MCP, delegated Microsoft 365 access, GitHub EMU user credentials) are listed in section 2 of `../specs/261003-agent-okta-d/agent-okta-d-PRD.md`; they are inputs to the entries below and have not been migrated into formal entries individually.
+Record significant architecture decisions here, one entry per decision (context, decision, consequences, status). The decisions already made as inputs to the PRD (D1 to D7: Okta OIDC as identity root, daemon rather than wrapper CLI, stock `aws`/`gh`/`git`, custom CLIs limited to `snow`/`outlook`/`teams`, Atlassian via Rovo MCP, delegated Microsoft 365 access, GitHub EMU user credentials) are listed in section 2 of `../specs/archive/261003-agent-okta-d/agent-okta-d-PRD.md`; they are inputs to the entries below and have not been migrated into formal entries individually.
 
 
 ## ADR-A: Dependency direction (Accepted, 2026-10-03)

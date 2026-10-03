@@ -1,6 +1,6 @@
 # Assumptions register
 
-Every item the PRD marks unconfirmed stays an explicit assumption. Code that depends on one carries a comment `ASSUMPTION(A-01)` (the tolerant form `ASSUMPTION(A01)` is also recognized), and the test `internal/domain/assumptions_test.go` fails if a marker names an id that is not listed here (AC-016). Each row is settled later by the matching row in `m0-spike-checklist.md`; until then the working assumption is implemented behind an interface and must not be treated as fact. Source: `specs/261003-agent-okta-d/research.md`, PRD sections 9.2 and 16.
+Every item the PRD marks unconfirmed stays an explicit assumption. Code that depends on one carries a comment `ASSUMPTION(A-01)` (the tolerant form `ASSUMPTION(A01)` is also recognized), and the test `internal/domain/assumptions_test.go` fails if a marker names an id that is not listed here (AC-016). Each row is settled later by the matching row in `m0-spike-checklist.md`; until then the working assumption is implemented behind an interface and must not be treated as fact. Source: `specs/archive/261003-agent-okta-d/research.md`, PRD sections 9.2 and 16.
 
 | ID | Assumption | Working behavior in code | Settled by (M0 checklist row) |
 |---|---|---|---|

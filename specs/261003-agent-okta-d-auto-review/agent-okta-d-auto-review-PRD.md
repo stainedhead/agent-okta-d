@@ -75,7 +75,7 @@ Acceptance criteria:
 - A test per provider with an `httptest` redirect to a second server asserts the second server receives no request.
 
 ### FR-R09 (P2): Spec tracking files and DEV-FLOW status are stale
-Evidence: `specs/261003-agent-okta-d/status.md` and `tasks.md` still list P9.1 (user-docs) and P9.2 as open (28/30), although `user-docs/` has been delivered on this branch. `status.md` says Phase 9 is Open. P9.2 items (assumptions cross-check, coverage gate on three targets) are done in CI but not ticked.
+Evidence: `specs/archive/261003-agent-okta-d/status.md` and `tasks.md` still list P9.1 (user-docs) and P9.2 as open (28/30), although `user-docs/` has been delivered on this branch. `status.md` says Phase 9 is Open. P9.2 items (assumptions cross-check, coverage gate on three targets) are done in CI but not ticked.
 Acceptance criteria:
 - `tasks.md`, `status.md` and `DEV-FLOW-STATUS.md` agree with the delivered state, with the remaining deferrals listed once.
 - The skill-PR note for the root repo is present as a tracked follow-up with an owner.
