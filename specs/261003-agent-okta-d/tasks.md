@@ -2,7 +2,7 @@
 Date: 2026-10-03 | Status: Planning
 
 ## Progress Summary
-0/32 tasks complete
+0/29 tasks complete
 
 Format: `ID | WS | depends | est | acceptance`. All tasks: failing test first; gates (gofmt, vet, lint, `go test -race`) green.
 
@@ -53,4 +53,4 @@ Format: `ID | WS | depends | est | acceptance`. All tasks: failing test first; g
 - P9.1 | WS-INT | all | 3h | `user-docs/` (install, config reference, troubleshooting); `doctor` enforces agent/daemon user separation check.
 - P9.2 | WS-INT | all | 2h | Final gates on 3 targets, coverage thresholds, assumptions register cross-check (every `ASSUMPTION(` marker listed), deferred P1/P2 list in status.md, note for root-repo skill PR.
 
-Total: 32 tasks (counted after review).
+Total: 29 tasks.

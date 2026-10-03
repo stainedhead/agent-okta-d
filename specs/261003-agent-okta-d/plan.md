@@ -49,3 +49,6 @@ Out of scope for the build (REL-12). Releases are cut later by the pipeline; fir
 
 ## Success Metrics
 All tasks accepted; gates green on all three targets; every assumption has a marker and a checklist row.
+
+## Merge protocol for parallel workstreams
+Each WS works in its own git worktree/branch off `feat/agent-okta-d`, touches only its owned directories (table above), rebases before merge, and merges in dependency order: WS-0, WS-A, WS-B/C/D/E/F/S (any order), WS-INT, then WS-G/H/I/J/K/L (any order). `internal/app/registry.go` additions are made by WS-INT at merge time. Frozen domain changes after WS-0 go through one owner.

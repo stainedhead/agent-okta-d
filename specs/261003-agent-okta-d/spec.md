@@ -63,6 +63,35 @@ None (no prior release). `pkg/client` starts at 0.y.z; surface changes are semve
 - Real-system acceptance remains with the later human M0/sandbox work (recorded in the spike checklist).
 - No test needs network or credentials; no secret appears in logs (fuzz test).
 
+## 10a. Numbered acceptance criteria (map to FRs)
+- AC-001 (FR-001): `pkg/client` against the fake daemon returns credentials; each HTTP error shape maps to the documented typed error; `go list -deps` shows stdlib only.
+- AC-002 (FR-002/009): `run` exits 78 on invalid config and 77 after `revoked`; `version` prints semver/commit/date.
+- AC-003 (FR-003): invalid or missing config fields produce `ErrConfig` naming the field, never echoing secret values.
+- AC-004 (FR-004): assertion has correct iss/sub/aud/exp(60 s)/unique jti/kid; 429 honors reset header; `invalid_client` is `ErrAuthDefinitive`, 5xx is `ErrTransient`.
+- AC-005 (FR-005): fake-clock test: refresh at 50 % +/- jitter; backoff 1-60 s; `degraded` at expiry-30 s; `revoked` only after two definitive errors within 30 s; `reauth_required` never retried.
+- AC-006 (FR-006): caller outside allow-listed gid is refused; revoked state returns 403; degraded returns 503 with Retry-After.
+- AC-007 (FR-007): kill between temp write and rename leaves no partial target; stale sinks wiped at start; removed on revoke.
+- AC-008 (FR-008): fuzz finds no secret in any log/audit line, error path or recovered panic.
+- AC-009 (FR-009): `revoke` runs the 6-step sequence in order (verified by recording fakes); doctor refuses a provider whose probe fails.
+- AC-010 (FR-010): 24 h fake-clock run keeps token file valid, mode 0440, never partially written.
+- AC-011 (FR-011): expired PAT -> `reauth_required` + alert, zero retries; credential helper `store`/`erase` leave the secret untouched; wrong login in doctor fails.
+- AC-012 (FR-012): token with < min_ttl remaining triggers synchronous refresh; deactivated-user fake yields rejection on next call.
+- AC-013 (FR-013): rotated refresh token persisted before the access token is returned (store failure -> no token served); `invalid_grant` -> `reauth_required`; cross-mailbox probe expects 403.
+- AC-014 (FR-014): secret re-fetched on interval; file 0440 atomic; value never logged.
+- AC-015 (FR-015): DER->JOSE vectors pass; world-readable key file refused; keychain/tpm packages compile on all three targets.
+- AC-016 (FR-016/017): CI cross-compiles all targets without network credentials; every `ASSUMPTION(Axx)` marker appears in `docs/assumptions.md`.
+
+## 10b. Edge cases and error paths
+- External failures: every adapter maps network error, timeout, 429 (with Retry-After), 5xx to `ErrTransient`; only Okta definitive auth errors can cause `revoked`; provider-side 401 on user-credential providers means `reauth_required`.
+- Empty/null: empty secret, empty token, missing `expires_at`, zero TTL, malformed JWT/JSON are `ErrProvider` and never cached or served.
+- Concurrency: simultaneous `token` callers share one refresh (single-flight); concurrent refresh plus revoke resolves to revoked winning; secret-store writes are versioned (compare-and-set) so two writers cannot lose a rotated refresh token.
+- Permission boundaries: peer-cred failure or unknown gid is deny; sinks and key files with wider modes than configured are refused; daemon running as the agent user fails `doctor`.
+- Clock: skew >= 30 s fails self-test; wake-from-sleep triggers immediate refresh; monotonic time used for scheduling.
+- Shutdown/crash: SIGKILL leaves sinks, wiped at next start; SIGTERM removes sinks.
+
+## 10c. Open questions (owner / resolution path)
+Build-phase decisions already made: assumptions are coded behind interfaces (owner: build agents). Remaining, carried from the PRD sections 16 and 17.7 and owned by humans, resolved by the later M0 spike: A-01..A-12 in `research.md`, Hermes MCP header behavior (A-09), Apple signing (A-12), WSL2 service (A-11), shared pipeline/registry choices. Build-time open item: module dependency choices for JOSE/YAML/AWS SDK (owner: WS-0, record in ADR; default stdlib-only where practical).
+
 ## 11. Risks and Mitigation
 | Risk | Mitigation |
 |---|---|
