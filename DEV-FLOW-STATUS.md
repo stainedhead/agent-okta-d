@@ -25,6 +25,6 @@ Pre-step: PRD validation (/review-prd) — ✅ Complete (Minor gaps, fixed)
 | 9  | Implement Review Fixes          | ✅ Complete | see git log | see git log | FR-R01 (warning only), R02-R08, R10 implemented; R09 tracking fixed; R01 production adapters deferred (docs/deferred.md) |
 | 10 | Archive Fixes Spec              | ✅ Complete | see git log | see git log | moved to specs/archive/ |
 | 11 | Final Quality Pass              | ✅ Complete | see git log | see git log | gofmt 0 files; go vet ok; golangci-lint 0 issues; go test -race -cover all pass, every package with statements >=90% (cmd shim covered by subprocess smoke test, signer interface-only, storetest helper); CGO_ENABLED=0 builds ok darwin/arm64 linux/amd64 linux/arm64; make cover gate fixed (storetest helper tripped it); README links to archived PRD fixed; docs links checked |
-| 12 | Process Analysis Report         | ⬜ Pending | — | — | — |
-| 13 | Archive Spec                    | ⬜ Pending | — | — | — |
+| 12 | Process Analysis Report         | ✅ Complete | see git log | see git log | dev-flow-analysis.md |
+| 13 | Archive Spec                    | ✅ Complete | see git log | see git log | specs/archive has both specs; specs/ holds only archive/ |
 | 14 | Open Pull Request               | ⬜ Pending | — | — | — |
