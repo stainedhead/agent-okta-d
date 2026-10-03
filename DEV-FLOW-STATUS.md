@@ -3,7 +3,7 @@
 **PRD:** agent-okta-d-PRD.md
 **Spec:** specs/261003-agent-okta-d
 **Branch:** feat/agent-okta-d
-**Review PRD:** specs/261003-agent-okta-d-auto-review/agent-okta-d-auto-review-PRD.md
+**Review PRD:** specs/archive/261003-agent-okta-d-auto-review/agent-okta-d-auto-review-PRD.md
 **Process Start:** 2026-10-03T20:24:55Z
 **Process End:** —
 **Total Runtime:** —
@@ -23,7 +23,7 @@ Pre-step: PRD validation (/review-prd) — ✅ Complete (Minor gaps, fixed)
 | 7  | Archive Original Spec          | ✅ Complete | 2026-10-03T21:18:19Z | 2026-10-03T21:18:19Z | ~0 |
 | 8  | Spec Review Fixes              | ✅ Complete | 2026-10-03T21:18:19Z | 2026-10-03T21:18:19Z | approx |
 | 9  | Implement Review Fixes          | ✅ Complete | see git log | see git log | FR-R01 (warning only), R02-R08, R10 implemented; R09 tracking fixed; R01 production adapters deferred (docs/deferred.md) |
-| 10 | Archive Fixes Spec              | ⬜ Pending | — | — | — |
+| 10 | Archive Fixes Spec              | ✅ Complete | see git log | see git log | moved to specs/archive/ |
 | 11 | Final Quality Pass              | ⬜ Pending | — | — | — |
 | 12 | Process Analysis Report         | ⬜ Pending | — | — | — |
 | 13 | Archive Spec                    | ⬜ Pending | — | — | — |

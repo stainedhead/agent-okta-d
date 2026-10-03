@@ -1,6 +1,6 @@
 # Status: agent-okta-d-auto-review
 
-Feature: agent-okta-d-auto-review | Created: 2026-10-03 | Source PRD: specs/261003-agent-okta-d-auto-review/agent-okta-d-auto-review-PRD.md
+Feature: agent-okta-d-auto-review | Created: 2026-10-03 | Source PRD: specs/archive/261003-agent-okta-d-auto-review/agent-okta-d-auto-review-PRD.md
 
 ## Overall Progress
 | Phase | Status |

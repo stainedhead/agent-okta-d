@@ -1,6 +1,6 @@
 # Spec: agent-okta-d Review Fixes
 
-Feature: agent-okta-d-auto-review | Created: 2026-10-03 | Source PRD: specs/261003-agent-okta-d-auto-review/agent-okta-d-auto-review-PRD.md
+Feature: agent-okta-d-auto-review | Created: 2026-10-03 | Source PRD: specs/archive/261003-agent-okta-d-auto-review/agent-okta-d-auto-review-PRD.md
 
 ## Executive Summary
 Fix the findings from the automated code review of branch feat/agent-okta-d. No P0 blockers; 2 P1 and 8 P2 findings. FR-R01 (real AWS adapters) is deferred.
@@ -114,4 +114,4 @@ Okta error semantics unverified against a real tenant (documented assumption). m
 M1 P1 fixes (FR-R01 warning, FR-R02). M2 security cluster (R03, R06, R08). M3 ipc cluster (R04, R05, R07). M4 process (R09, R10). M5 final quality pass.
 
 ## References
-specs/261003-agent-okta-d-auto-review/agent-okta-d-auto-review-PRD.md; specs/archive/261003-agent-okta-d/
+specs/archive/261003-agent-okta-d-auto-review/agent-okta-d-auto-review-PRD.md; specs/archive/261003-agent-okta-d/

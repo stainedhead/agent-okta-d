@@ -1,6 +1,6 @@
 # Research
 
-Feature: agent-okta-d-auto-review | Created: 2026-10-03 | Source PRD: specs/261003-agent-okta-d-auto-review/agent-okta-d-auto-review-PRD.md
+Feature: agent-okta-d-auto-review | Created: 2026-10-03 | Source PRD: specs/archive/261003-agent-okta-d-auto-review/agent-okta-d-auto-review-PRD.md
 
 ## Research Questions
 1. Which Okta error codes for a client_credentials private_key_jwt grant identify the client versus a policy denial? (FR-R02)
