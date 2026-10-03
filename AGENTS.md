@@ -8,9 +8,16 @@ Rules for AI agents and human contributors working in this repository.
 
 Status: Draft PRD (`agent-okta-d-PRD.md`), no implementation yet. The PRD is the source of truth; its evidence legend (confirmed vs. unconfirmed items) must be preserved when summarising it.
 
+## Doc routing
+
+- Goal, direction or scope shift: update `INTENT.md` (why this tool exists and its wider context).
+- Requirements: `agent-okta-d-PRD.md` (source of truth).
+- Design decisions: `docs/architectural-decision-record.md`.
+
 ## Go layout (planned, per PRD section 9)
 
 ```
+INTENT.md           why this exists and what it is for
 cmd/agent-okta-d/   subcommands, signal handling, exit codes
 internal/           config, signer, okta, provider, store, enroll, cache, ipc, sink, obs
 pkg/client/         Go client library used by the snow, outlook and teams CLIs

@@ -2,7 +2,7 @@
 
 A credential daemon that gives autonomous SDLC agents short-lived, per-agent access to AWS, GitHub, ServiceNow, Atlassian and Microsoft 365 (Outlook, Teams), rooted in Okta OIDC where the target system accepts it.
 
-**Status: Draft PRD (v0.2). No implementation yet.** The requirements are in [`agent-okta-d-PRD.md`](agent-okta-d-PRD.md).
+**Status: Draft PRD (v0.2). No implementation yet.** The requirements are in [`agent-okta-d-PRD.md`](agent-okta-d-PRD.md). For why this exists and how it fits the wider agentic-teams project, see [`INTENT.md`](INTENT.md).
 
 ## What it is
 
@@ -59,6 +59,7 @@ None of the code directories exist yet. See PRD section 9 for the full module la
 
 ## Documentation
 
+- [`INTENT.md`](INTENT.md): purpose, wider context, goals and scope.
 - [`agent-okta-d-PRD.md`](agent-okta-d-PRD.md): the product requirements document (source of truth).
 - [`docs/`](docs/): product summary, product details, technical details and architectural decision record.
 - [`user-docs/`](user-docs/): end-user documentation; nothing to read yet.
