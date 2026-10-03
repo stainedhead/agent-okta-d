@@ -111,7 +111,7 @@ func (d *Daemon) assemble(registry *Registry) error {
 		return err
 	}
 	d.deps = &deps{
-		clock: d.env.Clock, okta: src, cache: d.cache, stores: newStoreSet(c, d.env, d.signer),
+		clock: d.env.Clock, okta: src, cache: d.cache, stores: d.newStores(c),
 		log: d.log, audit: d.audit,
 	}
 	d.cache.SetDeps(d.deps)
@@ -258,6 +258,9 @@ func (d *Daemon) listen(ctx context.Context) (*running, error) {
 	if err := os.MkdirAll(filepath.Dir(sock), 0o750); err != nil {
 		return nil, fmt.Errorf("socket directory: %w", err)
 	}
+	if err := ipc.CheckSocketDir(filepath.Dir(sock)); err != nil { // FR-R04
+		return nil, err
+	}
 	mode := os.FileMode(0o660)
 	if len(d.allowGIDs) > 1 {
 		mode = 0o666 // several groups: peer credentials and the allow-list decide
@@ -364,4 +367,11 @@ func (r *running) revoked(reason string) error {
 	})
 	d.log.Error("revoked: withdraw complete", "reason", reason)
 	return fmt.Errorf("daemon revoked (%s): %w", reason, domain.ErrRevoked)
+}
+
+// newStores builds the store set with the scrubber attached (FR-R06).
+func (d *Daemon) newStores(c *config.Config) *storeSet {
+	ss := newStoreSet(c, d.env, d.signer)
+	ss.scrub = d.scrub
+	return ss
 }

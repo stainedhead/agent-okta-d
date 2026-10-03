@@ -239,3 +239,50 @@ func isSafe(s string) bool {
 	}
 	return true
 }
+
+type memStore struct {
+	val domain.SecretString
+	err error
+}
+
+func (m *memStore) Get(context.Context, string) (domain.SecretValue, error) {
+	return domain.SecretValue{Value: m.val, Version: "1"}, m.err
+}
+
+func (m *memStore) Put(_ context.Context, _ string, v domain.SecretString, _ string) (string, error) {
+	m.val = v
+	return "2", m.err
+}
+
+func TestScrubStoreRegistersReadAndRotatedValues(t *testing.T) {
+	sc := domain.NewScrubber()
+	ms := &memStore{val: domain.NewSecret("old-refresh-token-AAAA")}
+	st := ScrubStore(ms, sc)
+	if _, err := st.Get(context.Background(), "k"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.Put(context.Background(), "k", domain.NewSecret("new-refresh-token-BBBB"), "1"); err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range []string{"old-refresh-token-AAAA", "new-refresh-token-BBBB"} {
+		if got := sc.Scrub("err: " + v); strings.Contains(got, v) {
+			t.Errorf("%s leaked: %q", v, got)
+		}
+	}
+	// error path: failed read registers nothing, failed write still does
+	ms.err = errors.New("boom")
+	sc2 := domain.NewScrubber()
+	st2 := ScrubStore(ms, sc2)
+	ms.val = domain.NewSecret("unread-value-CCCC")
+	_, _ = st2.Get(context.Background(), "k")
+	if sc2.Scrub("unread-value-CCCC") != "unread-value-CCCC" {
+		t.Error("failed read registered a value")
+	}
+	_, _ = st2.Put(context.Background(), "k", domain.NewSecret("failed-write-DDDD"), "")
+	if sc2.Scrub("failed-write-DDDD") == "failed-write-DDDD" {
+		t.Error("failed write not registered")
+	}
+	if ScrubStore(ms, nil) != domain.SecretStore(ms) || ScrubStore(nil, sc) != nil {
+		t.Error("nil passthrough")
+	}
+}

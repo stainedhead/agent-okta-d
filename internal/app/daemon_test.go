@@ -180,6 +180,21 @@ func TestStartupSocketGroupNotMember(t *testing.T) {
 	}
 }
 
+// FR-R04: start refuses a socket directory that other users can enter.
+func TestStartupRefusesWorldAccessibleSocketDir(t *testing.T) {
+	f := newFixture(t, fixOpt{})
+	if err := os.Chmod(f.sockd, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	err := runErr(t, f, DefaultRegistry())
+	if !errors.Is(err, domain.ErrPolicy) {
+		t.Fatalf("got %v", err)
+	}
+	if _, serr := os.Stat(f.cfg.IPC.Socket); serr == nil {
+		t.Fatal("socket created in an unsafe directory")
+	}
+}
+
 func TestMultipleAllowGIDsOpensSocketMode(t *testing.T) {
 	f := newFixture(t, fixOpt{allow: "agents, 4000"})
 	f.start(t)

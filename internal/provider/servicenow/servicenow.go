@@ -90,6 +90,7 @@ func New(cfg Config) (*Provider, error) {
 	if p.hc == nil {
 		p.hc = &http.Client{Timeout: 10 * time.Second}
 	}
+	p.hc = domain.NoRedirect(p.hc) // FR-R08
 	return p, nil
 }
 

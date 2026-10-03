@@ -1,8 +1,11 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -15,6 +18,7 @@ import (
 	"github.com/stainedhead/agent-okta-d/internal/config"
 	"github.com/stainedhead/agent-okta-d/internal/domain"
 	"github.com/stainedhead/agent-okta-d/internal/domain/domaintest"
+	"github.com/stainedhead/agent-okta-d/internal/obs"
 	"github.com/stainedhead/agent-okta-d/internal/signer/kms"
 	"github.com/stainedhead/agent-okta-d/internal/store/awssm"
 )
@@ -370,5 +374,47 @@ func TestDepsAndBackend(t *testing.T) {
 	st := b.Status(context.Background())
 	if st.State != domain.StateValid || len(st.Providers) != 1 || st.Providers[0].ExpiresAt == nil {
 		t.Fatalf("%+v", st)
+	}
+}
+
+// FR-R06: a rotated opaque (non-JWT) msgraph refresh token that a foreign
+// library embeds in an error must not reach the log output.
+func TestRotatedRefreshTokenNeverLogged(t *testing.T) {
+	g := newFixture(t, fixOpt{providers: githubProviders("PLACEHOLDER", "pat")})
+	g.cfgp = rewriteStorePath(t, g)
+	d, err := New(g.cfg, g.env, DefaultRegistry())
+	if err != nil {
+		t.Fatal(err)
+	}
+	st, err := d.deps.Store(StoreFileEncrypted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	ver := ""
+	var tokens []string
+	for i := range 10 { // rotation must not grow the scrubber without bound
+		tok := fmt.Sprintf("0.AAAA-opaque-refresh-%02d", i)
+		tokens = append(tokens, tok)
+		if ver, err = st.Put(ctx, "msgraph-rt", domain.NewSecret(tok), ver); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var buf bytes.Buffer
+	log := obs.NewLogger(&buf, slog.LevelDebug, d.scrub)
+	last := tokens[len(tokens)-1]
+	log.Error("refresh failed", "err", fmt.Errorf("oauth2: cannot fetch token: refresh_token=%s rejected", last))
+	if out := buf.String(); strings.Contains(out, last) || !strings.Contains(out, domain.Redacted) {
+		t.Fatalf("token leaked or not redacted: %s", out)
+	}
+	rd, err := st.Get(ctx, "msgraph-rt")
+	if err != nil || rd.Value.Reveal() != last {
+		t.Fatal(err)
+	}
+	if got := d.scrub.Scrub(tokens[0]); got != tokens[0] {
+		t.Fatalf("oldest rotated value should be evicted (bounded list): %q", got)
+	}
+	if strings.Contains(d.scrub.Scrub(last), last) {
+		t.Fatal("last token must be scrubbed")
 	}
 }

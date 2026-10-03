@@ -51,8 +51,13 @@ type guarded struct {
 
 func (g guarded) Mint(ctx context.Context, d domain.Deps) (domain.Credential, error) {
 	c, err := g.Provider.Mint(ctx, d)
-	if err == nil && c.Kind == domain.KindStaticSecret {
-		g.scrub.Add(c.Value)
+	if err == nil {
+		if c.Kind == domain.KindStaticSecret {
+			g.scrub.Add(c.Value)
+		} else {
+			// rotating access tokens: bounded per provider (FR-R06)
+			g.scrub.AddFrom("mint/"+g.Name(), c.Value)
+		}
 	}
 	return c, err
 }

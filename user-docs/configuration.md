@@ -103,7 +103,7 @@ The AWS provider always refreshes at 0.45 plus at most 0.05 jitter.
 | Key | Required | Default | Notes |
 |---|---|---|---|
 | `socket` | defaulted | `/run/agentd/<id>/agentd.sock` (`/var/run/agentd/<id>/agentd.sock` on macOS) | |
-| `allow_gids` | yes | none | at least one group name or numeric gid; fail closed. The first group name is also the group given read access to credential files |
+| `allow_gids` | yes | none | at least one group name or numeric gid; fail closed. The first group name is also the group given read access to credential files. A caller matches on its primary gid or any supplementary group; on Linux the supplementary groups are read from `/proc/<pid>/status` (if `/proc` is hidden, for example `hidepid`, only the primary gid matches and the call is denied with 403, so make the allowed group the agent's primary group). The socket directory must be owned by the daemon user and have no permissions for others, or start fails |
 
 ## log
 

@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -35,4 +36,33 @@ func TestScrubberConcurrent(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+}
+
+func TestScrubberBoundsRotatingSources(t *testing.T) {
+	s := NewScrubber()
+	s.Add(NewSecret("static-secret-1"))
+	for i := range 100 {
+		s.AddFrom("store/rt", NewSecret(fmt.Sprintf("refresh-token-%03d", i)))
+	}
+	s.AddFrom("store/rt", NewSecret("refresh-token-099")) // duplicate: no growth
+	if n := len(s.secrets); n != 1+maxPerSource {
+		t.Fatalf("list size %d, want %d", n, 1+maxPerSource)
+	}
+	if got := s.Scrub("a refresh-token-099 b refresh-token-096 c static-secret-1"); strings.Contains(got, "token-09") || strings.Contains(got, "static") {
+		t.Fatalf("recent values not scrubbed: %q", got)
+	}
+	if got := s.Scrub("refresh-token-000"); got != "refresh-token-000" {
+		t.Fatalf("evicted value still scrubbed: %q", got)
+	}
+	for i := range maxStatic + 10 {
+		s.Add(NewSecret(fmt.Sprintf("static-value-%04d", i)))
+	}
+	if n := len(s.bySrc[""]); n != maxStatic {
+		t.Fatalf("static size %d", n)
+	}
+	var z Scrubber // zero value usable
+	z.AddFrom("x", NewSecret("zero-value-ok"))
+	if z.Scrub("zero-value-ok") != Redacted {
+		t.Fatal("zero value")
+	}
 }

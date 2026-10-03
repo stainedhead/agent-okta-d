@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -154,5 +155,32 @@ func TestRepoRead(t *testing.T) {
 	}
 	if err := api.Repo(context.Background(), domain.NewSecret("t"), "acme/other"); !errors.Is(err, domain.ErrProvider) {
 		t.Fatalf("got %v", err)
+	}
+}
+
+// FR-R08: neither the API client nor the configured default follows redirects.
+func TestAPIDoesNotFollowRedirect(t *testing.T) {
+	var hits atomic.Int32
+	second := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { hits.Add(1) }))
+	defer second.Close()
+	first := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, second.URL+"/user", http.StatusTemporaryRedirect)
+	}))
+	defer first.Close()
+	a := &API{Base: first.URL, HTTP: &http.Client{}}
+	_, _ = a.User(context.Background(), domain.NewSecret("tok"))
+	a.HTTP = nil
+	_, _ = a.User(context.Background(), domain.NewSecret("tok"))
+	if hits.Load() != 0 {
+		t.Fatalf("redirect target received %d requests", hits.Load())
+	}
+	for _, hc := range []*http.Client{nil, {}} {
+		c, err := (Config{APIBase: first.URL, Mode: ModePAT, Login: "x", StoreName: "s", SecretID: "i", HTTPClient: hc}).Normalize()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if c.HTTPClient.CheckRedirect == nil {
+			t.Fatal("normalized client follows redirects")
+		}
 	}
 }
