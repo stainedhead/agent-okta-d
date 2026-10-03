@@ -1,5 +1,9 @@
 name: CI
 
+# Implements the BLD-1..BLD-6 requirements in this repository's PRD (CI/CD section).
+# Steps that need Go source are skipped while the repository has no .go files, so
+# CI passes trivially now and starts enforcing as soon as code lands.
+
 on:
   pull_request:
   workflow_dispatch:
@@ -7,25 +11,73 @@ on:
 permissions:
   contents: read
 
+env:
+  GOLANGCI_LINT_VERSION: v2.14.0
+  GOVULNCHECK_VERSION: v1.8.0
+
 jobs:
-  test:
+  verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - name: Check go mod tidy leaves no diff
+      - name: Download modules
+        run: go mod download
+      - name: go mod tidy leaves no diff
         run: |
           go mod tidy
-          git diff --exit-code -- go.mod go.sum
-      - name: Vet
+          if [ -n "$(git status --porcelain -- go.mod go.sum)" ]; then
+            git status --porcelain -- go.mod go.sum
+            git diff -- go.mod go.sum
+            echo "::error::go mod tidy changed go.mod or go.sum; run it and commit the result"
+            exit 1
+          fi
+      - name: gofmt
+        run: |
+          out="$(gofmt -l .)"
+          if [ -n "$out" ]; then echo "$out"; exit 1; fi
+      - name: go vet
+        if: hashFiles('**/*.go') != ''
         run: go vet ./...
-      - name: Test
+      - name: go test
+        if: hashFiles('**/*.go') != ''
         run: go test -race ./...
-      - name: Lint
-        uses: golangci/golangci-lint-action@v8
+      - name: golangci-lint
+        if: hashFiles('**/*.go') != ''
+        uses: golangci/golangci-lint-action@v9
         with:
-          version: latest
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
       - name: govulncheck
-        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+        if: hashFiles('**/*.go') != ''
+        run: go run golang.org/x/vuln/cmd/govulncheck@${{ env.GOVULNCHECK_VERSION }} ./...
+
+  # BLD-3: every release target is cross-compiled on each PR. Windows users run the
+  # Linux build under WSL, so there is no windows target.
+  cross-build:
+    name: build ${{ matrix.goos }}/${{ matrix.goarch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { goos: darwin, goarch: arm64, runner: macos-14 }
+          - { goos: linux, goarch: amd64, runner: ubuntu-latest }
+          - { goos: linux, goarch: arm64, runner: ubuntu-latest }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Download modules
+        run: go mod download
+      - name: Build
+        if: hashFiles('**/*.go') != ''
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          # Linux targets are static. The darwin build runs natively on an Apple-silicon
+          # runner with cgo left on, because Keychain-backed code may need it.
+          CGO_ENABLED: ${{ matrix.goos == 'linux' && '0' || '1' }}
+        run: go build ./...
