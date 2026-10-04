@@ -92,3 +92,7 @@ Project documentation:
 ## Contributing
 
 See [`AGENTS.md`](AGENTS.md). Before committing run `gofmt -l .`, `go vet ./...`, `golangci-lint run` and `go test ./...`. Never commit credentials.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
